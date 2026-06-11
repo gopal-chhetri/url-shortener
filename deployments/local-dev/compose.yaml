@@ -1,0 +1,39 @@
+services:
+  backend:
+    container_name: url-shortener
+    tty: true
+    build:
+      context: ../../
+      dockerfile: ./deployments/local-dev/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    env_file:
+      - .env
+    volumes:
+      - ../../:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    container_name: url-shortener-db
+    image: postgis/postgis:15-3.4-alpine
+    restart: unless-stopped
+    platform: linux/amd64
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT}:5432"
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - POSTGRES_DB=${DB_NAME}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data: {}

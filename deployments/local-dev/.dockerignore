@@ -1,0 +1,20 @@
+# Ignore Go build artifacts and caches
+**/*.test
+**/*.prof
+**/*.out
+**/vendor/
+**/go.mod.bak
+**/go.sum.bak
+
+# Ignore common development files and directories
+.git/
+.gitignore
+.DS_Store
+.vscode/
+*.log
+tmp/
+url-shortener/
+
+# Exclude Docker-related files themselves
+Dockerfile
+.dockerignore
