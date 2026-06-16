@@ -1,0 +1,7 @@
+p, admin, users, read
+p, admin, users, write
+p, admin, users, delete
+p, admin, roles, read
+p, admin, roles, write
+p, admin, roles, delete
+p, user, profile, write

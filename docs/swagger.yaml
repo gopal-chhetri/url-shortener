@@ -1,0 +1,213 @@
+basePath: /api/v1
+definitions:
+  github_com_gopal-chhetri_url-shortener_internal_db_sqlc.User:
+    properties:
+      createdAt:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      email:
+        type: string
+      firstName:
+        type: string
+      id:
+        type: string
+      isActive:
+        $ref: '#/definitions/pgtype.Bool'
+      lastName:
+        type: string
+      passwordHash:
+        type: string
+      roleID:
+        type: string
+      updatedAt:
+        $ref: '#/definitions/pgtype.Timestamptz'
+    type: object
+  github_com_gopal-chhetri_url-shortener_internal_response.Response:
+    properties:
+      data: {}
+      error:
+        type: boolean
+      message:
+        type: string
+    type: object
+  internal_auth.AuthResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_db_sqlc.User'
+    type: object
+  internal_auth.LoginRequest:
+    properties:
+      email:
+        example: johndoe@gmail.com
+        type: string
+      password:
+        example: password
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  internal_auth.RegisterRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - first_name
+    - last_name
+    - password
+    type: object
+  internal_auth.TokenResponse:
+    properties:
+      token:
+        example: jwt_token_string
+        type: string
+    type: object
+  pgtype.Bool:
+    properties:
+      bool:
+        type: boolean
+      valid:
+        type: boolean
+    type: object
+  pgtype.InfinityModifier:
+    enum:
+    - 1
+    - 0
+    - -1
+    type: integer
+    x-enum-varnames:
+    - Infinity
+    - Finite
+    - NegativeInfinity
+  pgtype.Timestamptz:
+    properties:
+      infinityModifier:
+        $ref: '#/definitions/pgtype.InfinityModifier'
+      time:
+        type: string
+      valid:
+        type: boolean
+    type: object
+host: localhost:8000
+info:
+  contact: {}
+  description: This is a sample pandit app server with authentication and authorization.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Panditry API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login user with email and password
+      parameters:
+      - description: Login request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_auth.AuthResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      summary: Login user
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh JWT token for authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_auth.TokenResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Refresh JWT token
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with email and password
+      parameters:
+      - description: Register request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_auth.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_auth.AuthResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      summary: Register a new user
+      tags:
+      - auth
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

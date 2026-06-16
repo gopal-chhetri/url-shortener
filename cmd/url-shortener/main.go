@@ -1,22 +1,46 @@
 package main
 
 import (
-	"net/http"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	docs "github.com/gopal-chhetri/url-shortener/docs" // generated swagger docs
+	"github.com/gopal-chhetri/url-shortener/internal/bootstrap"
+	"github.com/gopal-chhetri/url-shortener/internal/routes"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// @title Panditry API
+// @version 1.0
+// @description This is a sample pandit app server with authentication and authorization.
+// @termsOfService http://swagger.io/terms/
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+// @host localhost:8000
+// @BasePath /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 func main() {
-	// Initialize default Gin router (includes Logging and Recovery middleware)
+	app := bootstrap.NewApplication()
+
+	// Update Swagger host dynamically
+	docs.SwaggerInfo.Host = "localhost:" + app.Env.Port
+
 	r := gin.Default()
 
-	// Define a simple GET route
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "pong",
-		})
-	})
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE"},
+		AllowHeaders: []string{"*"},
+	}))
 
-	// Start server on 0.0.0.0:8080 by default
-	r.Run() 
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	routes.SetupRoute(app, r)
+
+	if err := r.Run(":" + app.Env.Port); err != nil {
+		panic(err)
+	}
 }
-

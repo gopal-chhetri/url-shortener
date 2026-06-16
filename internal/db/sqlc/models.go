@@ -5,11 +5,12 @@
 package dbgen
 
 import (
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Click struct {
-	ID        pgtype.UUID
+	ID        uuid.UUID
 	UserID    pgtype.UUID
 	UrlID     pgtype.UUID
 	Device    pgtype.Text
@@ -21,7 +22,7 @@ type Click struct {
 }
 
 type Role struct {
-	ID          pgtype.UUID
+	ID          uuid.UUID
 	Name        string
 	Description pgtype.Text
 	CreatedAt   pgtype.Timestamptz
@@ -29,7 +30,7 @@ type Role struct {
 }
 
 type Url struct {
-	ID          pgtype.UUID
+	ID          uuid.UUID
 	ShortUrl    string
 	OriginalUrl string
 	UserID      pgtype.UUID
@@ -39,12 +40,12 @@ type Url struct {
 }
 
 type User struct {
-	ID           pgtype.UUID
+	ID           uuid.UUID
 	Email        string
 	PasswordHash string
 	FirstName    string
 	LastName     string
-	RoleID       pgtype.UUID
+	RoleID       uuid.UUID
 	IsActive     pgtype.Bool
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz

@@ -8,6 +8,7 @@ package dbgen
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -61,9 +62,9 @@ func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) (Role, e
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (email, password_hash, first_name, last_name)
-VALUES ($1, $2, $3, $4)
-RETURNING id, email, first_name, last_name, role_id, is_active, created_at, updated_at
+INSERT INTO users (email, password_hash, first_name, last_name, role_id)
+VALUES ($1, $2, $3, $4, (SELECT id FROM roles WHERE name = 'user' LIMIT 1))
+RETURNING id, email, password_hash, first_name, last_name, role_id, is_active, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -73,28 +74,18 @@ type CreateUserParams struct {
 	LastName     string
 }
 
-type CreateUserRow struct {
-	ID        pgtype.UUID
-	Email     string
-	FirstName string
-	LastName  string
-	RoleID    pgtype.UUID
-	IsActive  pgtype.Bool
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-}
-
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, createUser,
 		arg.Email,
 		arg.PasswordHash,
 		arg.FirstName,
 		arg.LastName,
 	)
-	var i CreateUserRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
+		&i.PasswordHash,
 		&i.FirstName,
 		&i.LastName,
 		&i.RoleID,
@@ -111,7 +102,7 @@ SET is_active = false, updated_at = NOW()
 WHERE id = $1
 `
 
-func (q *Queries) DeleteUserById(ctx context.Context, id pgtype.UUID) error {
+func (q *Queries) DeleteUserById(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteUserById, id)
 	return err
 }
@@ -122,7 +113,7 @@ FROM roles
 WHERE id = $1
 `
 
-func (q *Queries) GetRoleByID(ctx context.Context, id pgtype.UUID) (Role, error) {
+func (q *Queries) GetRoleByID(ctx context.Context, id uuid.UUID) (Role, error) {
 	row := q.db.QueryRow(ctx, getRoleByID, id)
 	var i Role
 	err := row.Scan(
@@ -154,29 +145,30 @@ func (q *Queries) GetRoleByName(ctx context.Context, name string) (Role, error) 
 	return i, err
 }
 
+const getRoleNameByID = `-- name: GetRoleNameByID :one
+SELECT name FROM roles WHERE id = $1
+`
+
+func (q *Queries) GetRoleNameByID(ctx context.Context, id uuid.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, getRoleNameByID, id)
+	var name string
+	err := row.Scan(&name)
+	return name, err
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, first_name, last_name, role_id, is_active, created_at, updated_at
+SELECT id, email, password_hash, first_name, last_name, role_id, is_active, created_at, updated_at
 FROM users
 WHERE email=$1 AND is_active=true
 `
 
-type GetUserByEmailRow struct {
-	ID        pgtype.UUID
-	Email     string
-	FirstName string
-	LastName  string
-	RoleID    pgtype.UUID
-	IsActive  pgtype.Bool
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-}
-
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByEmail, email)
-	var i GetUserByEmailRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
+		&i.PasswordHash,
 		&i.FirstName,
 		&i.LastName,
 		&i.RoleID,
@@ -188,28 +180,18 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 }
 
 const getUserById = `-- name: GetUserById :one
-SELECT id, email, first_name, last_name, role_id, is_active, created_at, updated_at
+SELECT id, email, password_hash, first_name, last_name, role_id, is_active, created_at, updated_at
 FROM users
 WHERE id=$1 AND is_active=true
 `
 
-type GetUserByIdRow struct {
-	ID        pgtype.UUID
-	Email     string
-	FirstName string
-	LastName  string
-	RoleID    pgtype.UUID
-	IsActive  pgtype.Bool
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-}
-
-func (q *Queries) GetUserById(ctx context.Context, id pgtype.UUID) (GetUserByIdRow, error) {
+func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 	row := q.db.QueryRow(ctx, getUserById, id)
-	var i GetUserByIdRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
+		&i.PasswordHash,
 		&i.FirstName,
 		&i.LastName,
 		&i.RoleID,
@@ -259,7 +241,7 @@ func (q *Queries) ListRoles(ctx context.Context, arg ListRolesParams) ([]Role, e
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, email, first_name, last_name, role_id, is_active, created_at, updated_at
+SELECT id, email, password_hash, first_name, last_name, role_id, is_active, created_at, updated_at
 FROM users
 WHERE is_active = true
 ORDER BY created_at DESC
@@ -271,29 +253,19 @@ type ListUsersParams struct {
 	Offset int32
 }
 
-type ListUsersRow struct {
-	ID        pgtype.UUID
-	Email     string
-	FirstName string
-	LastName  string
-	RoleID    pgtype.UUID
-	IsActive  pgtype.Bool
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-}
-
-func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error) {
 	rows, err := q.db.Query(ctx, listUsers, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListUsersRow
+	var items []User
 	for rows.Next() {
-		var i ListUsersRow
+		var i User
 		if err := rows.Scan(
 			&i.ID,
 			&i.Email,
+			&i.PasswordHash,
 			&i.FirstName,
 			&i.LastName,
 			&i.RoleID,
@@ -315,38 +287,28 @@ const updateUserById = `-- name: UpdateUserById :one
 UPDATE users
 SET first_name = $2, last_name = $3, email = $4, updated_at = NOW()
 WHERE id = $1 AND is_active = true
-RETURNING id, email, first_name, last_name, role_id, is_active, created_at, updated_at
+RETURNING id, email, password_hash, first_name, last_name, role_id, is_active, created_at, updated_at
 `
 
 type UpdateUserByIdParams struct {
-	ID        pgtype.UUID
+	ID        uuid.UUID
 	FirstName string
 	LastName  string
 	Email     string
 }
 
-type UpdateUserByIdRow struct {
-	ID        pgtype.UUID
-	Email     string
-	FirstName string
-	LastName  string
-	RoleID    pgtype.UUID
-	IsActive  pgtype.Bool
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-}
-
-func (q *Queries) UpdateUserById(ctx context.Context, arg UpdateUserByIdParams) (UpdateUserByIdRow, error) {
+func (q *Queries) UpdateUserById(ctx context.Context, arg UpdateUserByIdParams) (User, error) {
 	row := q.db.QueryRow(ctx, updateUserById,
 		arg.ID,
 		arg.FirstName,
 		arg.LastName,
 		arg.Email,
 	)
-	var i UpdateUserByIdRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
+		&i.PasswordHash,
 		&i.FirstName,
 		&i.LastName,
 		&i.RoleID,

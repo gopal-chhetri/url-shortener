@@ -1,15 +1,15 @@
 -- name: CreateUser :one
-INSERT INTO users (email, password_hash, first_name, last_name)
-VALUES ($1, $2, $3, $4)
-RETURNING id, email, first_name, last_name, role_id, is_active, created_at, updated_at;
+INSERT INTO users (email, password_hash, first_name, last_name, role_id)
+VALUES ($1, $2, $3, $4, (SELECT id FROM roles WHERE name = 'user' LIMIT 1))
+RETURNING *;
 
 -- name: GetUserByEmail :one
-SELECT id, email, first_name, last_name, role_id, is_active, created_at, updated_at
+SELECT *
 FROM users
 WHERE email=$1 AND is_active=true;
 
 -- name: GetUserById :one
-SELECT id, email, first_name, last_name, role_id, is_active, created_at, updated_at
+SELECT *
 FROM users
 WHERE id=$1 AND is_active=true;
 
@@ -17,7 +17,7 @@ WHERE id=$1 AND is_active=true;
 UPDATE users
 SET first_name = $2, last_name = $3, email = $4, updated_at = NOW()
 WHERE id = $1 AND is_active = true
-RETURNING id, email, first_name, last_name, role_id, is_active, created_at, updated_at;
+RETURNING *;
 
 -- name: DeleteUserById :exec
 UPDATE users
@@ -25,7 +25,7 @@ SET is_active = false, updated_at = NOW()
 WHERE id = $1;
 
 -- name: ListUsers :many
-SELECT id, email, first_name, last_name, role_id, is_active, created_at, updated_at
+SELECT *
 FROM users
 WHERE is_active = true
 ORDER BY created_at DESC
@@ -50,6 +50,9 @@ WHERE name = $1;
 SELECT id, name, description, created_at, updated_at
 FROM roles
 WHERE id = $1;
+
+-- name: GetRoleNameByID :one
+SELECT name FROM roles WHERE id = $1;
 
 -- name: ListRoles :many
 SELECT id, name, description, created_at, updated_at

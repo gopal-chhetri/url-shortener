@@ -1,14 +1,4 @@
-# Generator Stage
-FROM golang:1.26.3-alpine AS generator
-WORKDIR /app
-COPY sqlc.yaml ./
-COPY internal/ ./internal/
-RUN go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.26.0
-COPY migrations/ ./migrations/
-RUN sqlc generate
-
-# Build Stage
-FROM golang:1.26.3-alpine AS build
+FROM golang:1.26.3-alpine
 WORKDIR /app
 
 ENV CGO_ENABLED=0 \

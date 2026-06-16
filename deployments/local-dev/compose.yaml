@@ -7,7 +7,7 @@ services:
       dockerfile: ./deployments/local-dev/Dockerfile
     restart: unless-stopped
     ports:
-      - "${SERVER_PORT}:${SERVER_PORT}"
+      - "${PORT}:${PORT}"
     env_file:
       - .env
     volumes:
