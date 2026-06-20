@@ -23,6 +23,7 @@ func NewAuthHandler(authService AuthServiceInterface, logger *zap.Logger) *AuthH
 type AuthHandlerInterface interface {
 	Register(c *gin.Context)
 	Login(c *gin.Context)
+	Logout(c *gin.Context)
 	RefreshToken(c *gin.Context)
 }
 
@@ -82,6 +83,40 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	response.SuccessResponse(c, resp)
+}
+
+// Logout godoc
+// @Summary Logout user
+// @Description Logout user
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response
+// @Failure 401 {object} response.Response
+// @Router /auth/logout [post]
+func (h *AuthHandler) Logout(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		response.UnauthorizedResponse(c, "Unauthorized")
+		return
+	}
+
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		infra.LogError(h.logger, "Invalid user ID", err)
+		response.UnauthorizedResponse(c, "Invalid token")
+		return
+	}
+
+	err = h.authService.Logout(c.Request.Context(), userUUID)
+	if err != nil {
+		infra.LogError(h.logger, "Logout failed", err)
+		response.ErrorResponse(c, err)
+		return
+	}
+
+	response.SuccessResponse(c, nil)
 }
 
 // RefreshToken godoc

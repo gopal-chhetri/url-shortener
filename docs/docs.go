@@ -78,6 +78,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/logout": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Logout user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Logout user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/refresh": {
             "post": {
                 "security": [
@@ -252,7 +286,7 @@ const docTemplate = `{
                 },
                 "password": {
                     "type": "string",
-                    "example": "password"
+                    "example": "password123"
                 }
             }
         },
@@ -266,17 +300,21 @@ const docTemplate = `{
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "johndoe@gmail.com"
                 },
                 "first_name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "John"
                 },
                 "last_name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Doe"
                 },
                 "password": {
                     "type": "string",
-                    "minLength": 6
+                    "minLength": 6,
+                    "example": "password123"
                 }
             }
         },
@@ -344,8 +382,8 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:8000",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
-	Title:            "Panditry API",
-	Description:      "This is a sample pandit app server with authentication and authorization.",
+	Title:            "URL Shortener API",
+	Description:      "This is a sample URL Shortener server with authentication and authorization.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

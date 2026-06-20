@@ -11,5 +11,6 @@ func SetupAuthRoute(app *bootstrap.Application, authGroup, authProtected *gin.Ro
 	authHandler := NewAuthHandler(authService, app.Logger)
 	authGroup.POST("/login", authHandler.Login)
 	authGroup.POST("/register", authHandler.Register)
+	authProtected.POST("/logout", authHandler.Logout)
 	authProtected.POST("/refresh", authHandler.RefreshToken)
 }

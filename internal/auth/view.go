@@ -6,15 +6,15 @@ import (
 )
 
 type RegisterRequest struct {
-	Email     string `json:"email" binding:"required,email"`
-	Password  string `json:"password" binding:"required,min=6"`
-	FirstName string `json:"first_name" binding:"required"`
-	LastName  string `json:"last_name" binding:"required"`
+	Email     string `json:"email" binding:"required,email" example:"johndoe@gmail.com"`
+	Password  string `json:"password" binding:"required,min=6" example:"password123"`
+	FirstName string `json:"first_name" binding:"required" example:"John"`
+	LastName  string `json:"last_name" binding:"required" example:"Doe"`
 }
 
 type LoginRequest struct {
 	Email    string `json:"email" example:"johndoe@gmail.com" binding:"required,email"`
-	Password string `json:"password" example:"password" binding:"required"`
+	Password string `json:"password" example:"password123" binding:"required"`
 }
 
 type AuthResponse struct {

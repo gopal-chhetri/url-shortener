@@ -13,7 +13,7 @@ RUN apk update && \
     apk add --no-cache git curl
 
 RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.0
-RUN go install github.com/swaggo/swag/cmd/swag@v1.8.11
+RUN go install github.com/swaggo/swag/cmd/swag@v1.16.4
 RUN go install github.com/air-verse/air@v1.61.0
 
 COPY . .

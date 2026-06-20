@@ -22,13 +22,13 @@ migrate-down:
 	@echo "Running database migrations..."
 	$(GOBASH) -c 'migrate -database "postgres://$$DB_USER:$$DB_PASS@$$DB_HOST:$$DB_PORT/$$DB_NAME?sslmode=disable" -path ./migrations down'
 
-# seed:
-# 	@echo "Seeding database with default data..."
-# 	$(GOBASH) -c 'go run cmd/seed/seed.go'
+seed:
+	@echo "Seeding database with default data..."
+	$(GOBASH) -c 'go run cmd/seed/seed.go'
 
 swagger:
 	@echo "Generating swagger docs..."
-	$(GOBASH) -c 'swag init -g cmd/url-shortener/main.go'
+	$(GOBASH) -c 'swag init -g cmd/url-shortener/main.go --parseDependency'
 
 gen:
 	@echo "Generating go structs from sql schema..."

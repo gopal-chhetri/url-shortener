@@ -1,8 +1,8 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "This is a sample pandit app server with authentication and authorization.",
-        "title": "Panditry API",
+        "description": "This is a sample URL Shortener server with authentication and authorization.",
+        "title": "URL Shortener API",
         "termsOfService": "http://swagger.io/terms/",
         "contact": {},
         "license": {
@@ -59,6 +59,40 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Logout user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Logout user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
                         }
@@ -246,7 +280,7 @@
                 },
                 "password": {
                     "type": "string",
-                    "example": "password"
+                    "example": "password123"
                 }
             }
         },
@@ -260,17 +294,21 @@
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "johndoe@gmail.com"
                 },
                 "first_name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "John"
                 },
                 "last_name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Doe"
                 },
                 "password": {
                     "type": "string",
-                    "minLength": 6
+                    "minLength": 6,
+                    "example": "password123"
                 }
             }
         },

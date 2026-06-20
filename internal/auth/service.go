@@ -17,6 +17,7 @@ import (
 type AuthServiceInterface interface {
 	Register(ctx context.Context, req RegisterRequest) (*AuthResponse, error)
 	Login(ctx context.Context, req LoginRequest) (*AuthResponse, error)
+	Logout(ctx context.Context, userID uuid.UUID) error
 	ValidateToken(tokenString string) (*Claims, error)
 	RefreshToken(ctx context.Context, userID uuid.UUID) (string, error)
 }
@@ -127,6 +128,28 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*AuthRespons
 		Token: token,
 		User:  user,
 	}, nil
+}
+
+func (s *AuthService) Logout(ctx context.Context, userID uuid.UUID) error {
+	user, err := s.userRepo.GetUserByID(ctx, GetUserDTO{ID: &userID})
+	if err != nil {
+		s.logger.Warn("User logout failed: user not found", zap.String("userID", userID.String()))
+		return response.NewAppError("User not found")
+	}
+
+	roleName, err := s.userRepo.GetRoleNameByID(ctx, user.RoleID)
+	if err != nil {
+		s.logger.Warn("Failed to get role name for user during logout, defaulting to 'user'", zap.Error(err))
+		roleName = "user"
+	}
+
+	_, err = s.generateToken(user.ID, user.Email, roleName, s.env.AccessTokenSecret, s.env.AccessTokenExpiryMinute)
+	if err != nil {
+		s.logger.Error("Failed to generate access token during logout", zap.Error(err))
+		return response.NewAppError("Failed to generate access token")
+	}
+
+	return nil
 }
 
 func (s *AuthService) ValidateToken(tokenString string) (*Claims, error) {

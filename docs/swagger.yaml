@@ -42,7 +42,7 @@ definitions:
         example: johndoe@gmail.com
         type: string
       password:
-        example: password
+        example: password123
         type: string
     required:
     - email
@@ -51,12 +51,16 @@ definitions:
   internal_auth.RegisterRequest:
     properties:
       email:
+        example: johndoe@gmail.com
         type: string
       first_name:
+        example: John
         type: string
       last_name:
+        example: Doe
         type: string
       password:
+        example: password123
         minLength: 6
         type: string
     required:
@@ -100,12 +104,12 @@ definitions:
 host: localhost:8000
 info:
   contact: {}
-  description: This is a sample pandit app server with authentication and authorization.
+  description: This is a sample URL Shortener server with authentication and authorization.
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   termsOfService: http://swagger.io/terms/
-  title: Panditry API
+  title: URL Shortener API
   version: "1.0"
 paths:
   /auth/login:
@@ -141,6 +145,27 @@ paths:
           schema:
             $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
       summary: Login user
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Logout user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Logout user
       tags:
       - auth
   /auth/refresh:

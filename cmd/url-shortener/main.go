@@ -10,9 +10,9 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-// @title Panditry API
+// @title URL Shortener API
 // @version 1.0
-// @description This is a sample pandit app server with authentication and authorization.
+// @description This is a sample URL Shortener server with authentication and authorization.
 // @termsOfService http://swagger.io/terms/
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
