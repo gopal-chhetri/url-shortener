@@ -1,4 +1,4 @@
-.PHONY: format run back migrate migrate-down seed swagger gen gobash
+.PHONY: format run build back migrate migrate-down seed swagger gen gobash
 
 GOBASH = docker exec -it url-shortener /bin/sh
 
@@ -10,6 +10,9 @@ format:
 
 run:
 	air -c .air.toml
+
+build:
+	docker compose -f deployments/local-dev/compose.yaml up --build
 
 back:
 	docker compose -f deployments/local-dev/compose.yaml up

@@ -4,4 +4,12 @@ p, admin, users, delete
 p, admin, roles, read
 p, admin, roles, write
 p, admin, roles, delete
+p, admin, urls, read
+p, admin, urls, write
+p, admin, urls, delete
+p, admin, admin, read
+p, admin, admin, write
 p, user, profile, write
+p, user, urls, read
+p, user, urls, write
+p, user, urls, delete

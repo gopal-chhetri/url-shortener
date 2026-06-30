@@ -64,3 +64,23 @@ LIMIT $1 OFFSET $2;
 SELECT COUNT(*)
 FROM roles;
 
+-- name: UpdateUserRole :one
+UPDATE users
+SET role_id = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: UpdateUserStatus :one
+UPDATE users
+SET is_active = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: ListAllUsers :many
+SELECT *
+FROM users
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2;
+
+-- name: CountAllUsers :one
+SELECT COUNT(*) FROM users;

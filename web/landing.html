@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShortURL — Precision Link Engineering</title>
+  <meta name="description" content="A high-performance URL shortener and link management platform. Turn messy links into precise, measurable data.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="landing.css">
+</head>
+<body>
+  
+  <div class="beam-container">
+    <div class="beam"></div>
+  </div>
+
+  <nav class="glass-nav">
+    <div class="nav-brand">
+      <span class="logo-icon">⚡</span>
+      <span class="brand-text">ShortURL</span>
+    </div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#api">API</a>
+      <a href="index.html" class="nav-btn btn-ghost">Sign In</a>
+      <a href="index.html" class="nav-btn btn-primary">Start Building</a>
+    </div>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <div class="hero-content">
+        <h1 class="hero-title">
+          <span>Measure</span> <span>Every</span> <span>Click.</span>
+        </h1>
+        <p class="hero-subtitle">
+          A high-performance URL management platform built for speed, reliability, and deep telemetry.
+        </p>
+        
+        <div class="demo-terminal glass-panel">
+          <div class="terminal-header">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+            <span class="terminal-title">bash — link generator</span>
+          </div>
+          <div class="terminal-body">
+            <div class="input-line">
+              <span class="prompt">$</span>
+              <input type="text" id="demo-input" placeholder="Paste a long, messy URL here..." autocomplete="off">
+              <button id="demo-btn" class="btn-terminal">Execute</button>
+            </div>
+            <div id="demo-output" class="output-line hidden">
+              <span class="processing">[processing telemetry]... <span class="success">OK</span></span>
+              <div class="result-block">
+                <span class="result-label">Target:</span> <a href="#" id="result-link" class="result-link"></a>
+                <button id="copy-btn" class="btn-copy">Copy</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="bento-grid-section">
+      <h2 class="section-title">Telemetry & Control</h2>
+      
+      <div class="bento-grid">
+        <div class="bento-card span-2 glass-panel">
+          <div class="card-icon">📊</div>
+          <h3>Deep Analytics</h3>
+          <p>Gain absolute visibility into your audience. Track device profiles, browser fingerprints, and geographic origin in real-time.</p>
+          <div class="bento-visual viz-bar-chart">
+            <div class="bar h-60"></div>
+            <div class="bar h-100"></div>
+            <div class="bar h-40"></div>
+            <div class="bar h-80"></div>
+          </div>
+        </div>
+        
+        <div class="bento-card glass-panel">
+          <div class="card-icon">⚡</div>
+          <h3>Edge Routing</h3>
+          <p>Sub-10ms redirects powered by distributed edge networks. Never lose a click to latency.</p>
+        </div>
+        
+        <div class="bento-card glass-panel">
+          <div class="card-icon">🛡️</div>
+          <h3>Link Governance</h3>
+          <p>Instantly toggle link states. Protect your brand with granular access controls and audit logs.</p>
+          <div class="bento-visual toggle-demo">
+            <span class="status-indicator active">Live</span>
+          </div>
+        </div>
+
+        <div class="bento-card span-2 glass-panel">
+          <div class="card-icon">💻</div>
+          <h3>Developer API</h3>
+          <p>Integrate link generation directly into your CI/CD pipelines or application logic with our robust REST API.</p>
+          <pre class="code-snippet"><code><span class="keyword">POST</span> /api/v1/urls
+{
+  <span class="string">"original_url"</span>: <span class="string">"https://example.com/long"</span>,
+  <span class="string">"slug"</span>: <span class="string">"launch-q3"</span>
+}</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-section">
+      <div class="cta-content glass-panel">
+        <h2>Ready to optimize your links?</h2>
+        <p>Join thousands of developers and marketers building better digital experiences.</p>
+        <a href="index.html" class="btn-primary large">Create Free Account</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="glass-footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <span class="logo-icon">⚡</span>
+        <span class="brand-text">ShortURL</span>
+      </div>
+      <div class="footer-links">
+        <a href="#">Documentation</a>
+        <a href="#">Status</a>
+        <a href="#">Privacy</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="landing.js"></script>
+</body>
+</html>

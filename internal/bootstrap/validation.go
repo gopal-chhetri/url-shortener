@@ -28,4 +28,3 @@ func NewValidator() echo.Validator {
 func (v validate) Validate(i interface{}) error {
 	return v.validator.Struct(i)
 }
-

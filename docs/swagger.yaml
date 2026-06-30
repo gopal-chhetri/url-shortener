@@ -1,25 +1,14 @@
 basePath: /api/v1
 definitions:
-  github_com_gopal-chhetri_url-shortener_internal_db_sqlc.User:
+  github_com_gopal-chhetri_url-shortener_internal_response.PaginatedResponse:
     properties:
-      createdAt:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      email:
+      data: {}
+      error:
+        type: boolean
+      message:
         type: string
-      firstName:
-        type: string
-      id:
-        type: string
-      isActive:
-        $ref: '#/definitions/pgtype.Bool'
-      lastName:
-        type: string
-      passwordHash:
-        type: string
-      roleID:
-        type: string
-      updatedAt:
-        $ref: '#/definitions/pgtype.Timestamptz'
+      metadata:
+        $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_utils.PaginationResponse'
     type: object
   github_com_gopal-chhetri_url-shortener_internal_response.Response:
     properties:
@@ -29,17 +18,83 @@ definitions:
       message:
         type: string
     type: object
+  github_com_gopal-chhetri_url-shortener_internal_utils.PaginationResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  internal_admin.DashboardStats:
+    properties:
+      active_urls:
+        type: integer
+      inactive_urls:
+        type: integer
+      top_urls:
+        items:
+          $ref: '#/definitions/internal_admin.TopURL'
+        type: array
+      total_clicks:
+        type: integer
+      total_users:
+        type: integer
+    type: object
+  internal_admin.TopURL:
+    properties:
+      click_count:
+        type: integer
+      id:
+        type: string
+      original_url:
+        type: string
+      short_url:
+        type: string
+    type: object
+  internal_admin.UpdateRoleRequest:
+    properties:
+      role:
+        type: string
+    required:
+    - role
+    type: object
+  internal_admin.UpdateStatusRequest:
+    properties:
+      is_active:
+        type: boolean
+    type: object
+  internal_admin.UserResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      last_name:
+        type: string
+      role:
+        type: string
+    type: object
   internal_auth.AuthResponse:
     properties:
       token:
         type: string
       user:
-        $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_db_sqlc.User'
+        $ref: '#/definitions/internal_auth.UserResponse'
     type: object
   internal_auth.LoginRequest:
     properties:
       email:
-        example: johndoe@gmail.com
+        example: user@gmail.com
         type: string
       password:
         example: password123
@@ -51,13 +106,13 @@ definitions:
   internal_auth.RegisterRequest:
     properties:
       email:
-        example: johndoe@gmail.com
+        example: user@gmail.com
         type: string
       first_name:
-        example: John
+        example: User
         type: string
       last_name:
-        example: Doe
+        example: Name
         type: string
       password:
         example: password123
@@ -75,31 +130,52 @@ definitions:
         example: jwt_token_string
         type: string
     type: object
-  pgtype.Bool:
+  internal_auth.UserResponse:
     properties:
-      bool:
-        type: boolean
-      valid:
-        type: boolean
-    type: object
-  pgtype.InfinityModifier:
-    enum:
-    - 1
-    - 0
-    - -1
-    type: integer
-    x-enum-varnames:
-    - Infinity
-    - Finite
-    - NegativeInfinity
-  pgtype.Timestamptz:
-    properties:
-      infinityModifier:
-        $ref: '#/definitions/pgtype.InfinityModifier'
-      time:
+      email:
         type: string
-      valid:
-        type: boolean
+      first_name:
+        type: string
+      id:
+        type: string
+      last_name:
+        type: string
+      role:
+        type: string
+    type: object
+  internal_url.CreateURLRequestBody:
+    properties:
+      custom_slug:
+        example: my-custom-slug
+        type: string
+      original_url:
+        example: https://example.com/very-long-url
+        type: string
+    required:
+    - original_url
+    type: object
+  internal_url.URLResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      original_url:
+        type: string
+      short_url:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  internal_url.UpdateURLRequestBody:
+    properties:
+      original_url:
+        example: https://example.com/new-url
+        type: string
+    required:
+    - original_url
     type: object
 host: localhost:8000
 info:
@@ -112,6 +188,202 @@ info:
   title: URL Shortener API
   version: "1.0"
 paths:
+  /{code}:
+    get:
+      description: Redirect short URL to the original URL (no authentication required)
+      parameters:
+      - description: Short URL code
+        in: path
+        name: code
+        required: true
+        type: string
+      responses:
+        "302":
+          description: Redirect to original URL
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      summary: Redirect to original URL
+      tags:
+      - urls
+  /admin/roles:
+    get:
+      description: Returns all available user roles
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      security:
+      - BearerAuth: []
+      summary: List all roles (admin)
+      tags:
+      - admin
+  /admin/stats:
+    get:
+      description: 'Returns aggregate stats: total users, active/inactive URLs, total
+        clicks, top 5 URLs'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_admin.DashboardStats'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get admin dashboard statistics
+      tags:
+      - admin
+  /admin/users:
+    get:
+      description: Get a paginated list of all users in the system
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.PaginatedResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/internal_admin.UserResponse'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      security:
+      - BearerAuth: []
+      summary: List all users (admin)
+      tags:
+      - admin
+  /admin/users/{id}/role:
+    put:
+      consumes:
+      - application/json
+      description: Assign a new role to a user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Role update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_admin.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_admin.UserResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Update user role (admin)
+      tags:
+      - admin
+  /admin/users/{id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Activate or deactivate a user account
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_admin.UpdateStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_admin.UserResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Toggle user active status (admin)
+      tags:
+      - admin
   /auth/login:
     post:
       consumes:
@@ -229,6 +501,276 @@ paths:
       summary: Register a new user
       tags:
       - auth
+  /urls:
+    get:
+      description: Get a paginated list of URLs created by the authenticated user
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.PaginatedResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/internal_url.URLResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      security:
+      - BearerAuth: []
+      summary: List user's URLs
+      tags:
+      - urls
+    post:
+      consumes:
+      - application/json
+      description: Create a new shortened URL from an original URL
+      parameters:
+      - description: Create URL request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_url.CreateURLRequestBody'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_url.URLResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Create a short URL
+      tags:
+      - urls
+  /urls/{id}:
+    delete:
+      description: Soft delete a URL (deactivate it)
+      parameters:
+      - description: URL ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete a URL
+      tags:
+      - urls
+    get:
+      description: Get a specific URL by its ID
+      parameters:
+      - description: URL ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_url.URLResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get URL by ID
+      tags:
+      - urls
+    put:
+      consumes:
+      - application/json
+      description: Update the original URL for an existing short URL
+      parameters:
+      - description: URL ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update URL request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_url.UpdateURLRequestBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_url.URLResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Update a URL
+      tags:
+      - urls
+  /urls/{id}/analytics:
+    get:
+      description: Returns daily clicks (past 7 days), device breakdown, and browser
+        breakdown
+      parameters:
+      - description: URL ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get URL analytics
+      tags:
+      - urls
+  /urls/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Activate or deactivate a URL (soft enable/disable)
+      parameters:
+      - description: URL ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status update
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_url.URLResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Toggle URL active status
+      tags:
+      - urls
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.

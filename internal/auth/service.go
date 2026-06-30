@@ -96,7 +96,13 @@ func (s *AuthService) Register(ctx context.Context, req RegisterRequest) (*AuthR
 
 	return &AuthResponse{
 		Token: token,
-		User:  user,
+		User: UserResponse{
+			ID:        user.ID.String(),
+			Email:     user.Email,
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
+			Role:      roleName,
+		},
 	}, nil
 }
 
@@ -126,7 +132,13 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*AuthRespons
 
 	return &AuthResponse{
 		Token: token,
-		User:  user,
+		User: UserResponse{
+			ID:        user.ID.String(),
+			Email:     user.Email,
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
+			Role:      roleName,
+		},
 	}, nil
 }
 

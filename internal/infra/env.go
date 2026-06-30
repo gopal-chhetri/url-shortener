@@ -16,11 +16,16 @@ type Env struct {
 	DBUser                   string
 	DBPass                   string
 	AppEnv                   string
+	BaseURL                  string
 	Port                     string
 	AccessTokenExpiryMinute  int
 	RefreshTokenExpiryMinute int
 	AccessTokenSecret        string
 	RefreshTokenSecret       string
+	RedisHost                string
+	RedisPort                string
+	RedisPassword            string
+	RedisDB                  int
 }
 
 func NewEnv() *Env {
@@ -41,11 +46,16 @@ func (e *Env) loadFromEnvironment() {
 	e.DBUser = getEnv("DB_USER")
 	e.DBPass = getEnv("DB_PASS")
 	e.AppEnv = getEnv("APP_ENV")
+	e.BaseURL = getEnv("BASE_URL")
 	e.Port = getEnv("PORT")
 	e.AccessTokenExpiryMinute = getIntEnv("ACCESS_TOKEN_EXPIRY_MINUTE")
 	e.RefreshTokenExpiryMinute = getIntEnv("REFRESH_TOKEN_EXPIRY_MINUTE")
 	e.AccessTokenSecret = getEnv("ACCESS_TOKEN_SECRET")
 	e.RefreshTokenSecret = getEnv("REFRESH_TOKEN_SECRET")
+	e.RedisHost = getEnv("REDIS_HOST")
+	e.RedisPort = getEnv("REDIS_PORT")
+	e.RedisPassword = getEnv("REDIS_PASSWORD")
+	e.RedisDB = getIntEnv("REDIS_DB")
 }
 
 func getEnv(envName string) string {

@@ -20,6 +20,300 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/admin/roles": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all available user roles",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List all roles (admin)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns aggregate stats: total users, active/inactive URLs, total clicks, top 5 URLs",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get admin dashboard statistics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_admin.DashboardStats"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a paginated list of all users in the system",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List all users (admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.PaginatedResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/internal_admin.UserResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}/role": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Assign a new role to a user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Update user role (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Role update request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_admin.UpdateRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_admin.UserResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}/status": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Activate or deactivate a user account",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Toggle user active status (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Status update request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_admin.UpdateStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_admin.UserResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Login user with email and password",
@@ -215,38 +509,492 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/urls": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a paginated list of URLs created by the authenticated user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "urls"
+                ],
+                "summary": "List user's URLs",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Number of items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.PaginatedResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/internal_url.URLResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new shortened URL from an original URL",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "urls"
+                ],
+                "summary": "Create a short URL",
+                "parameters": [
+                    {
+                        "description": "Create URL request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_url.CreateURLRequestBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_url.URLResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/urls/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a specific URL by its ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "urls"
+                ],
+                "summary": "Get URL by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "URL ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_url.URLResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update the original URL for an existing short URL",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "urls"
+                ],
+                "summary": "Update a URL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "URL ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update URL request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_url.UpdateURLRequestBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_url.URLResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete a URL (deactivate it)",
+                "tags": [
+                    "urls"
+                ],
+                "summary": "Delete a URL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "URL ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/urls/{id}/analytics": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns daily clicks (past 7 days), device breakdown, and browser breakdown",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "urls"
+                ],
+                "summary": "Get URL analytics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "URL ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/urls/{id}/status": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Activate or deactivate a URL (soft enable/disable)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "urls"
+                ],
+                "summary": "Toggle URL active status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "URL ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Status update",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_url.URLResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/{code}": {
+            "get": {
+                "description": "Redirect short URL to the original URL (no authentication required)",
+                "tags": [
+                    "urls"
+                ],
+                "summary": "Redirect to original URL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Short URL code",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Redirect to original URL"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
-        "github_com_gopal-chhetri_url-shortener_internal_db_sqlc.User": {
+        "github_com_gopal-chhetri_url-shortener_internal_response.PaginatedResponse": {
             "type": "object",
             "properties": {
-                "createdAt": {
-                    "$ref": "#/definitions/pgtype.Timestamptz"
+                "data": {},
+                "error": {
+                    "type": "boolean"
                 },
-                "email": {
+                "message": {
                     "type": "string"
                 },
-                "firstName": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "isActive": {
-                    "$ref": "#/definitions/pgtype.Bool"
-                },
-                "lastName": {
-                    "type": "string"
-                },
-                "passwordHash": {
-                    "type": "string"
-                },
-                "roleID": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "$ref": "#/definitions/pgtype.Timestamptz"
+                "metadata": {
+                    "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_utils.PaginationResponse"
                 }
             }
         },
@@ -262,6 +1010,108 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_gopal-chhetri_url-shortener_internal_utils.PaginationResponse": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_admin.DashboardStats": {
+            "type": "object",
+            "properties": {
+                "active_urls": {
+                    "type": "integer"
+                },
+                "inactive_urls": {
+                    "type": "integer"
+                },
+                "top_urls": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_admin.TopURL"
+                    }
+                },
+                "total_clicks": {
+                    "type": "integer"
+                },
+                "total_users": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_admin.TopURL": {
+            "type": "object",
+            "properties": {
+                "click_count": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "original_url": {
+                    "type": "string"
+                },
+                "short_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_admin.UpdateRoleRequest": {
+            "type": "object",
+            "required": [
+                "role"
+            ],
+            "properties": {
+                "role": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_admin.UpdateStatusRequest": {
+            "type": "object",
+            "properties": {
+                "is_active": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_admin.UserResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_auth.AuthResponse": {
             "type": "object",
             "properties": {
@@ -269,7 +1119,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user": {
-                    "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_db_sqlc.User"
+                    "$ref": "#/definitions/internal_auth.UserResponse"
                 }
             }
         },
@@ -282,7 +1132,7 @@ const docTemplate = `{
             "properties": {
                 "email": {
                     "type": "string",
-                    "example": "johndoe@gmail.com"
+                    "example": "user@gmail.com"
                 },
                 "password": {
                     "type": "string",
@@ -301,15 +1151,15 @@ const docTemplate = `{
             "properties": {
                 "email": {
                     "type": "string",
-                    "example": "johndoe@gmail.com"
+                    "example": "user@gmail.com"
                 },
                 "first_name": {
                     "type": "string",
-                    "example": "John"
+                    "example": "User"
                 },
                 "last_name": {
                     "type": "string",
-                    "example": "Doe"
+                    "example": "Name"
                 },
                 "password": {
                     "type": "string",
@@ -327,41 +1177,74 @@ const docTemplate = `{
                 }
             }
         },
-        "pgtype.Bool": {
+        "internal_auth.UserResponse": {
             "type": "object",
             "properties": {
-                "bool": {
-                    "type": "boolean"
+                "email": {
+                    "type": "string"
                 },
-                "valid": {
-                    "type": "boolean"
+                "first_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
                 }
             }
         },
-        "pgtype.InfinityModifier": {
-            "type": "integer",
-            "enum": [
-                1,
-                0,
-                -1
+        "internal_url.CreateURLRequestBody": {
+            "type": "object",
+            "required": [
+                "original_url"
             ],
-            "x-enum-varnames": [
-                "Infinity",
-                "Finite",
-                "NegativeInfinity"
-            ]
+            "properties": {
+                "custom_slug": {
+                    "type": "string",
+                    "example": "my-custom-slug"
+                },
+                "original_url": {
+                    "type": "string",
+                    "example": "https://example.com/very-long-url"
+                }
+            }
         },
-        "pgtype.Timestamptz": {
+        "internal_url.URLResponse": {
             "type": "object",
             "properties": {
-                "infinityModifier": {
-                    "$ref": "#/definitions/pgtype.InfinityModifier"
-                },
-                "time": {
+                "created_at": {
                     "type": "string"
                 },
-                "valid": {
-                    "type": "boolean"
+                "id": {
+                    "type": "string"
+                },
+                "original_url": {
+                    "type": "string"
+                },
+                "short_url": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_url.UpdateURLRequestBody": {
+            "type": "object",
+            "required": [
+                "original_url"
+            ],
+            "properties": {
+                "original_url": {
+                    "type": "string",
+                    "example": "https://example.com/new-url"
                 }
             }
         }

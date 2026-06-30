@@ -59,6 +59,14 @@ func (m *AuthMiddleware) JWTMiddleware() gin.HandlerFunc {
 	}
 }
 
+func (m *AuthMiddleware) CasbinMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Casbin middleware for fine-grained authorization
+		// For now, we just check if user is authenticated (already done by JWTMiddleware)
+		c.Next()
+	}
+}
+
 func (m *AuthMiddleware) RBACMiddleware(resource, action string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get user roles from context

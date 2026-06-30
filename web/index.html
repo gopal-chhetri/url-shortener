@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShortURL — Dashboard</title>
+  <meta name="description" content="ShortURL — A premium URL shortening service with analytics and role-based access control." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+<!-- ─── LOGIN VIEW ─────────────────────────────────────────────────────────── -->
+<div id="view-login" class="auth-screen">
+  <div class="beam-container"><div class="beam"></div></div>
+  <div class="auth-card glass-panel">
+    <div class="auth-logo">
+      <i data-lucide="zap" class="logo-icon text-pulse"></i>
+      <h1>ShortURL</h1>
+    </div>
+    <p class="auth-subtitle">Precision link management</p>
+
+    <div id="auth-error" class="alert alert-error hidden"></div>
+
+    <!-- Login Form -->
+    <form id="form-login" class="auth-form active">
+      <div class="field-group">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" placeholder="you@example.com" required />
+      </div>
+      <div class="field-group">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" required />
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" id="btn-login">
+        <span class="btn-text">Authenticate</span>
+        <span class="btn-spinner hidden"></span>
+      </button>
+      <p class="auth-switch">No access? <a href="#" id="go-register">Request Access</a></p>
+    </form>
+
+    <!-- Register Form -->
+    <form id="form-register" class="auth-form hidden">
+      <div class="field-row">
+        <div class="field-group">
+          <label for="reg-first">First Name</label>
+          <input type="text" id="reg-first" placeholder="Ada" required />
+        </div>
+        <div class="field-group">
+          <label for="reg-last">Last Name</label>
+          <input type="text" id="reg-last" placeholder="Lovelace" required />
+        </div>
+      </div>
+      <div class="field-group">
+        <label for="reg-email">Email</label>
+        <input type="email" id="reg-email" placeholder="ada@example.com" required />
+      </div>
+      <div class="field-group">
+        <label for="reg-password">Password</label>
+        <input type="password" id="reg-password" placeholder="min 6 characters" required />
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" id="btn-register">
+        <span class="btn-text">Initialize Account</span>
+        <span class="btn-spinner hidden"></span>
+      </button>
+      <p class="auth-switch">Already initialized? <a href="#" id="go-login">Authenticate</a></p>
+    </form>
+  </div>
+</div>
+
+<!-- ─── APP SHELL ──────────────────────────────────────────────────────────── -->
+<div id="view-app" class="app hidden">
+  
+  <!-- Sidebar -->
+  <aside class="sidebar glass-panel-no-radius">
+    <div class="sidebar-header">
+      <i data-lucide="zap" class="logo-icon text-pulse"></i>
+      <span class="sidebar-title">ShortURL</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-view="dashboard" id="nav-dashboard">
+        <i data-lucide="layout-dashboard" class="nav-icon"></i> Dashboard
+      </a>
+      <a href="#" class="nav-item" data-view="my-urls" id="nav-my-urls">
+        <i data-lucide="link" class="nav-icon"></i> Active Links
+      </a>
+      <a href="#" class="nav-item hidden" data-view="admin" id="nav-admin">
+        <i data-lucide="shield-alert" class="nav-icon"></i> Admin Console
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-pill">
+        <div class="user-avatar" id="sidebar-avatar">U</div>
+        <div class="user-info">
+          <span class="user-name" id="sidebar-name">User</span>
+          <span class="user-role" id="sidebar-role">user</span>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm btn-full" id="btn-logout">
+        <i data-lucide="log-out" class="icon-sm"></i> Terminate Session
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- ── DASHBOARD VIEW ──────────────────────────────────────────────────── -->
+    <section id="page-dashboard" class="page active">
+      <header class="page-header">
+        <h2>Telemetry Overview</h2>
+        <p class="page-subtitle">Real-time metrics for your managed links</p>
+      </header>
+
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card glass-panel">
+          <div class="stat-icon bg-pulse-ghost"><i data-lucide="link-2" class="text-pulse"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Managed Links</span>
+            <span class="stat-value" id="stat-my-urls">—</span>
+          </div>
+        </div>
+        <div class="stat-card glass-panel">
+          <div class="stat-icon bg-data-ghost"><i data-lucide="mouse-pointer-click" class="text-data"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Total Resolves</span>
+            <span class="stat-value" id="stat-clicks">—</span>
+          </div>
+        </div>
+        <div class="stat-card glass-panel">
+          <div class="stat-icon bg-success-ghost"><i data-lucide="activity" class="text-success"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Active Endpoints</span>
+            <span class="stat-value" id="stat-active">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Create URL Panel -->
+      <div class="card glass-panel create-card">
+        <h3>Deploy New Link</h3>
+        <form id="form-create-url" class="create-form">
+          <div class="create-inputs">
+            <div class="input-wrapper" style="flex: 2">
+              <i data-lucide="globe"></i>
+              <input type="url" id="input-original-url" placeholder="https://example.com/very/long/target/path" required />
+            </div>
+            <div class="input-wrapper" style="flex: 1">
+              <i data-lucide="hash"></i>
+              <input type="text" id="input-custom-slug" placeholder="custom-slug (optional)" />
+            </div>
+            <button type="submit" class="btn btn-primary" id="btn-shorten">
+              <i data-lucide="zap" class="icon-sm"></i> Deploy
+            </button>
+          </div>
+        </form>
+        <div id="shorten-result" class="shorten-result hidden glass-panel">
+          <i data-lucide="check-circle" class="text-success"></i>
+          <span>Endpoint deployed: </span>
+          <a id="result-short-url" href="#" target="_blank" class="short-link data-font"></a>
+          <button class="btn btn-ghost btn-sm" id="btn-copy">
+            <i data-lucide="copy" class="icon-sm"></i> Copy
+          </button>
+        </div>
+      </div>
+
+      <!-- Recent URLs Table -->
+      <div class="card glass-panel">
+        <div class="card-header">
+          <h3>Recent Deployments</h3>
+          <button class="btn btn-ghost btn-sm" id="btn-view-all-urls">View Registry <i data-lucide="arrow-right" class="icon-sm"></i></button>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table" id="table-recent-urls">
+            <thead>
+              <tr>
+                <th>Endpoint</th>
+                <th>Target</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-recent-urls">
+              <tr><td colspan="4" class="table-empty">Initializing data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Analytics for selected URL -->
+      <div id="analytics-panel" class="hidden">
+        <div class="card glass-panel">
+          <div class="card-header">
+            <h3>Telemetry Data: <span id="analytics-url-label" class="data-font text-pulse"></span></h3>
+            <button class="btn btn-ghost btn-sm" id="btn-close-analytics"><i data-lucide="x" class="icon-sm"></i> Close</button>
+          </div>
+          <div class="charts-grid">
+            <div class="chart-card glass-panel">
+              <h4>Resolution Volume (7 days)</h4>
+              <canvas id="chart-daily" height="200"></canvas>
+            </div>
+            <div class="chart-card glass-panel">
+              <h4>Client Signatures</h4>
+              <canvas id="chart-device" height="200"></canvas>
+            </div>
+            <div class="chart-card glass-panel">
+              <h4>Browser Telemetry</h4>
+              <canvas id="chart-browser" height="200"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── MY URLS VIEW ────────────────────────────────────────────────────── -->
+    <section id="page-my-urls" class="page hidden">
+      <header class="page-header">
+        <h2>Active Links Registry</h2>
+        <p class="page-subtitle">Manage your deployed routing endpoints</p>
+      </header>
+      <div class="card glass-panel">
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Endpoint</th>
+                <th>Target Path</th>
+                <th>Deployed</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-all-urls">
+              <tr><td colspan="5" class="table-empty">Initializing data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination-urls"></div>
+      </div>
+    </section>
+
+    <!-- ── ADMIN VIEW ──────────────────────────────────────────────────────── -->
+    <section id="page-admin" class="page hidden">
+      <header class="page-header">
+        <h2>System Console</h2>
+        <p class="page-subtitle">Global metrics and identity management</p>
+      </header>
+
+      <!-- Admin Stats -->
+      <div class="stats-grid" id="admin-stats-grid">
+        <div class="stat-card glass-panel">
+          <div class="stat-icon bg-warning-ghost"><i data-lucide="users" class="text-warning"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Identities</span>
+            <span class="stat-value" id="admin-stat-users">—</span>
+          </div>
+        </div>
+        <div class="stat-card glass-panel">
+          <div class="stat-icon bg-pulse-ghost"><i data-lucide="radio" class="text-pulse"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Active Routes</span>
+            <span class="stat-value" id="admin-stat-active-urls">—</span>
+          </div>
+        </div>
+        <div class="stat-card glass-panel">
+          <div class="stat-icon bg-danger-ghost"><i data-lucide="power-off" class="text-danger"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Offline Routes</span>
+            <span class="stat-value" id="admin-stat-inactive-urls">—</span>
+          </div>
+        </div>
+        <div class="stat-card glass-panel">
+          <div class="stat-icon bg-data-ghost"><i data-lucide="activity" class="text-data"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Global Resolves</span>
+            <span class="stat-value" id="admin-stat-clicks">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users Management -->
+      <div class="card glass-panel">
+        <div class="card-header">
+          <h3>Identity Directory</h3>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr><th>Identity</th><th>Email</th><th>Access Level</th><th>State</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="tbody-admin-users">
+              <tr><td colspan="5" class="table-empty">Initializing data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination-admin-users"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Toast notification -->
+<div id="toast" class="toast hidden glass-panel"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

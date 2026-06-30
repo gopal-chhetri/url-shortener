@@ -12,6 +12,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countAllUsers = `-- name: CountAllUsers :one
+SELECT COUNT(*) FROM users
+`
+
+func (q *Queries) CountAllUsers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countAllUsers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countRoles = `-- name: CountRoles :one
 SELECT COUNT(*)
 FROM roles
@@ -202,6 +213,48 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 	return i, err
 }
 
+const listAllUsers = `-- name: ListAllUsers :many
+SELECT id, email, password_hash, first_name, last_name, role_id, is_active, created_at, updated_at
+FROM users
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListAllUsersParams struct {
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) ListAllUsers(ctx context.Context, arg ListAllUsersParams) ([]User, error) {
+	rows, err := q.db.Query(ctx, listAllUsers, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.PasswordHash,
+			&i.FirstName,
+			&i.LastName,
+			&i.RoleID,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRoles = `-- name: ListRoles :many
 SELECT id, name, description, created_at, updated_at
 FROM roles
@@ -304,6 +357,64 @@ func (q *Queries) UpdateUserById(ctx context.Context, arg UpdateUserByIdParams) 
 		arg.LastName,
 		arg.Email,
 	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.RoleID,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateUserRole = `-- name: UpdateUserRole :one
+UPDATE users
+SET role_id = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING id, email, password_hash, first_name, last_name, role_id, is_active, created_at, updated_at
+`
+
+type UpdateUserRoleParams struct {
+	ID     uuid.UUID
+	RoleID uuid.UUID
+}
+
+func (q *Queries) UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserRole, arg.ID, arg.RoleID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.RoleID,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateUserStatus = `-- name: UpdateUserStatus :one
+UPDATE users
+SET is_active = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING id, email, password_hash, first_name, last_name, role_id, is_active, created_at, updated_at
+`
+
+type UpdateUserStatusParams struct {
+	ID       uuid.UUID
+	IsActive pgtype.Bool
+}
+
+func (q *Queries) UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserStatus, arg.ID, arg.IsActive)
 	var i User
 	err := row.Scan(
 		&i.ID,
