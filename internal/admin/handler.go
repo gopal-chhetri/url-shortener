@@ -86,7 +86,7 @@ func (h *AdminHandler) toAdminURLResponse(u dbgen.Url, clickCount int64, user *d
 func (h *AdminHandler) buildFullShortURL(code string) string {
 	baseURL := h.env.BaseURL
 	if baseURL == "" {
-		baseURL = "http://localhost:8080"
+		baseURL = "http://localhost:7500"
 	}
 	return baseURL + "/" + code
 }

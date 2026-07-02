@@ -517,7 +517,7 @@ func (h *UrlHandler) buildFullShortURL(code string) string {
 	// In production, this would use the base URL from environment
 	baseURL := h.env.BaseURL
 	if baseURL == "" {
-		baseURL = "http://localhost:8080"
+		baseURL = "http://localhost:7500"
 	}
 	return baseURL + "/" + code
 }

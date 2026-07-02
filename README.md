@@ -137,28 +137,51 @@ Once running, visit:
 
 ## Deployment
 
-### Production Setup
+### Docker-Only Deployment (No Source Code on VPS)
 
-1. **Set up Infisical** — Create account at [app.infisical.com](https://app.infisical.com), create project and secrets
+The VPS only receives deployment artifacts (compose.yml, deploy.sh, migrations). The Docker image is pulled from GHCR.
 
-2. **Configure GitHub Secrets** — Add `VPS_HOST`, `VPS_SSH_USER`, `VPS_SSH_KEY` (or use Infisical OIDC)
+#### 1. Set up Infisical
 
-3. **Set up Cloudflare** — Add DNS A record pointing to your VPS IP, enable proxy
+Create account at [app.infisical.com](https://app.infisical.com):
+- Create project `url-shortener` with environments `dev` and `prod`
+- Create machine identities:
+  - `github-actions` — OIDC auth (for GitHub Actions CI/CD)
+  - `vps-deploy` — Universal Auth (for VPS deploy script)
+- Add all secrets to `prod` environment
 
-4. **Deploy to VPS**:
+#### 2. Set up Cloudflare
+
+Add DNS A record:
+- **Type**: A
+- **Name**: `shorturl` (or your subdomain)
+- **IPv4**: Your VPS IP
+- **Proxy**: ON (orange cloud)
+
+#### 3. Set up VPS
+
+Run from your local machine (one-time setup):
 
 ```bash
-# On the VPS, install Docker and Infisical CLI
-curl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | sudo -E bash
-sudo apt-get install infisical
+./deployments/production/setup-vps.sh <vps-ip> <ssh-user>
+```
 
-# Clone and configure
-git clone https://github.com/gopal-chhetri/url-shortener.git /opt/url-shortener
+This installs Docker and copies deployment files to `/opt/url-shortener/deployments/production/`.
+
+#### 4. Configure VPS environment
+
+SSH into VPS and set Infisical credentials:
+
+```bash
+export INFISICAL_CLIENT_ID="<vps-deploy-client-id>"
+export INFISICAL_CLIENT_SECRET="<vps-deploy-client-secret>"
+export INFISICAL_PROJECT_ID="<project-uuid>"
+```
+
+#### 5. Deploy
+
+```bash
 cd /opt/url-shortener/deployments/production
-cp .env.example .env
-# Edit .env with your Infisical credentials
-
-# Deploy
 ./deploy.sh latest
 ```
 
@@ -214,7 +237,10 @@ url-shortener/
 │   └── production/                 # Production deployment
 │       ├── Dockerfile              # Multi-stage build
 │       ├── compose.yml             # Production Docker Compose
-│       └── deploy.sh               # Deploy + rollback script
+│       ├── deploy.sh               # Deploy + rollback script
+│       ├── setup-vps.sh            # One-time VPS setup (no source code)
+│       ├── migrations/             # SQL migration files (deployment bundle)
+│       └── .env.example            # Infisical credential template
 ├── docs/                           # Swagger documentation
 └── .github/workflows/              # GitHub Actions
     ├── ci.yml                      # CI pipeline
