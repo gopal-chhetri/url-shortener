@@ -29,6 +29,29 @@ definitions:
       total_pages:
         type: integer
     type: object
+  internal_admin.AdminURLResponse:
+    properties:
+      click_count:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      original_url:
+        type: string
+      short_url:
+        type: string
+      updated_at:
+        type: string
+      user_first_name:
+        type: string
+      user_id:
+        type: string
+      user_last_name:
+        type: string
+    type: object
   internal_admin.DashboardStats:
     properties:
       active_urls:
@@ -160,6 +183,8 @@ definitions:
         type: string
       id:
         type: string
+      is_active:
+        type: boolean
       original_url:
         type: string
       short_url:
@@ -177,10 +202,10 @@ definitions:
     required:
     - original_url
     type: object
-host: localhost:8000
 info:
   contact: {}
-  description: This is a sample URL Shortener server with authentication and authorization.
+  description: This is a URL Shortener server with authentication, authorization,
+    and analytics.
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
@@ -253,6 +278,128 @@ paths:
       security:
       - BearerAuth: []
       summary: Get admin dashboard statistics
+      tags:
+      - admin
+  /admin/urls:
+    get:
+      description: Get a paginated list of all URLs with optional search and sort
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search term for short_url or original_url
+        in: query
+        name: search
+        type: string
+      - default: date
+        description: 'Sort by: date, clicks'
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.PaginatedResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      security:
+      - BearerAuth: []
+      summary: List all URLs (admin)
+      tags:
+      - admin
+  /admin/urls/{id}:
+    delete:
+      description: Soft-delete any URL in the system
+      parameters:
+      - description: URL ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete URL (admin)
+      tags:
+      - admin
+  /admin/urls/{id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Activate or deactivate any URL in the system
+      parameters:
+      - description: URL ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_admin.UpdateStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_admin.AdminURLResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Toggle URL active status (admin)
       tags:
       - admin
   /admin/users:

@@ -50,6 +50,7 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 		}
 	} else {
 		redisStatus = "NOT_CONFIGURED"
+		hasError = true
 	}
 
 	status := http.StatusOK

@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       setTimeout(() => {
         const slug = Math.random().toString(36).substring(2, 8);
-        const shortUrl = `surl.io/${slug}`;
+        const shortUrl = `short.url/${slug}`;
         
         resultLink.textContent = shortUrl;
         resultLink.href = `https://${shortUrl}`;
