@@ -140,6 +140,38 @@ func (q *Queries) GetClickCountByUserID(ctx context.Context, userID pgtype.UUID)
 	return count, err
 }
 
+const getClickCountsByURLIDs = `-- name: GetClickCountsByURLIDs :many
+SELECT url_id, COUNT(*)::bigint AS click_count
+FROM clicks
+WHERE url_id = ANY($1::uuid[])
+GROUP BY url_id
+`
+
+type GetClickCountsByURLIDsRow struct {
+	UrlID      pgtype.UUID
+	ClickCount int64
+}
+
+func (q *Queries) GetClickCountsByURLIDs(ctx context.Context, dollar_1 []uuid.UUID) ([]GetClickCountsByURLIDsRow, error) {
+	rows, err := q.db.Query(ctx, getClickCountsByURLIDs, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetClickCountsByURLIDsRow
+	for rows.Next() {
+		var i GetClickCountsByURLIDsRow
+		if err := rows.Scan(&i.UrlID, &i.ClickCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getClickStatsByDateRange = `-- name: GetClickStatsByDateRange :many
 SELECT 
     DATE(created_at) as date,

@@ -10,6 +10,11 @@ const state = {
   token: localStorage.getItem('su_token') || null,
   user:  JSON.parse(localStorage.getItem('su_user') || 'null'),
   currentView: 'dashboard',
+  urlFilter: 'active',
+  adminUrlFilter: 'active',
+  adminUrlSearch: '',
+  adminUrlSort: 'date',
+  adminUrlUserId: null, // Filter by specific user ID
   charts: {},
 };
 
@@ -77,6 +82,29 @@ function refreshIcons() {
   }
 }
 
+function updateNavbar() {
+  const signIn = $('nav-sign-in');
+  const cta = $('nav-cta');
+  if (!signIn || !cta) return;
+
+  if (state.token && state.user) {
+    signIn.classList.add('hidden');
+    cta.textContent = 'Dashboard';
+    cta.href = '#';
+    cta.onclick = (e) => {
+      e.preventDefault();
+      if (!$('view-app').classList.contains('hidden')) {
+        switchView('dashboard');
+      }
+    };
+  } else {
+    signIn.classList.remove('hidden');
+    cta.textContent = 'Start Building';
+    cta.href = 'index.html';
+    cta.onclick = null;
+  }
+}
+
 /* ─────────────────────────────────────────
    AUTH
 ──────────────────────────────────────── */
@@ -94,15 +122,18 @@ function enterApp(user, token) {
 
   /* show admin nav if needed */
   if (user.role === 'admin') {
-    $('nav-admin').classList.remove('hidden');
+    $('nav-admin-users').classList.remove('hidden');
+    $('nav-admin-links').classList.remove('hidden');
     $('nav-my-urls').classList.add('hidden');
   } else {
-    $('nav-admin').classList.add('hidden');
+    $('nav-admin-users').classList.add('hidden');
+    $('nav-admin-links').classList.add('hidden');
     $('nav-my-urls').classList.remove('hidden');
   }
 
   $('view-login').classList.add('hidden');
   $('view-app').classList.remove('hidden');
+  updateNavbar();
   refreshIcons();
   switchView('dashboard');
 }
@@ -118,6 +149,7 @@ async function logout(callApi = true) {
   state.user  = null;
   $('view-app').classList.add('hidden');
   $('view-login').classList.remove('hidden');
+  updateNavbar();
   
   Object.values(state.charts).forEach(c => c?.destroy());
   state.charts = {};
@@ -211,7 +243,8 @@ function switchView(name) {
 
   if (name === 'dashboard') loadDashboard();
   if (name === 'my-urls')   loadMyUrls();
-  if (name === 'admin')     loadAdmin();
+  if (name === 'admin-users') loadAdminUsers();
+  if (name === 'admin-links') loadAdminLinks();
 }
 
 document.querySelectorAll('.nav-item').forEach(item => {
@@ -267,7 +300,7 @@ function renderRecentUrls(urls) {
   }
   tbody.innerHTML = urls.map(u => `
     <tr>
-      <td><a href="${u.short_url}" target="_blank" class="short-link data-font">${u.short_url.replace(/^https?:\/\//, '')}</a></td>
+      <td><a href="${u.short_url}" target="_blank" class="short-link data-font">${u.short_url.split('/').pop()}</a></td>
       <td class="url-orig-cell" title="${u.original_url}">${u.original_url}</td>
       <td>
         <span class="status-badge ${u.is_active !== false ? 'active' : 'inactive'}">
@@ -311,7 +344,7 @@ $('form-create-url').addEventListener('submit', async e => {
     
     const resultEl = $('shorten-result');
     const linkEl   = $('result-short-url');
-    linkEl.textContent = urlData.short_url.replace(/^https?:\/\//, '');
+    linkEl.textContent = urlData.short_url.split('/').pop();
     linkEl.href = urlData.short_url;
     resultEl.classList.remove('hidden');
 
@@ -341,7 +374,7 @@ let dailyChart = null, deviceChart = null, browserChart = null;
 
 async function showAnalytics(id, shortUrl) {
   const panel = $('analytics-panel');
-  $('analytics-url-label').textContent = shortUrl.replace(/^https?:\/\//, '');
+  $('analytics-url-label').textContent = shortUrl.split('/').pop();
   panel.classList.remove('hidden');
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
@@ -475,18 +508,23 @@ function chartDefaults({ legend }) {
 async function loadMyUrls(page = 1) {
   try {
     const res = await apiFetch(`/urls?page=${page}&limit=10`);
-    const urls = res.data || [];
+    let urls = res.data || [];
+    
+    // Filter URLs based on selected tab
+    if (state.urlFilter === 'active') {
+      urls = urls.filter(u => u.is_active !== false);
+    }
     
     const tbody = $('tbody-all-urls');
     if (!urls.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="table-empty">No active routes.</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="5" class="table-empty">${state.urlFilter === 'active' ? 'No active routes.' : 'No routes found.'}</td></tr>`;
       $('pagination-urls').innerHTML = '';
       return;
     }
     
     tbody.innerHTML = urls.map(u => `
       <tr>
-        <td><a href="${u.short_url}" target="_blank" class="short-link data-font">${u.short_url.replace(/^https?:\/\//, '')}</a></td>
+        <td><a href="${u.short_url}" target="_blank" class="short-link data-font">${u.short_url.split('/').pop()}</a></td>
         <td class="url-orig-cell" title="${u.original_url}">${u.original_url}</td>
         <td class="data-font text-nebula">${new Date(u.created_at).toLocaleDateString()}</td>
         <td>
@@ -519,9 +557,9 @@ async function loadMyUrls(page = 1) {
 }
 
 /* ─────────────────────────────────────────
-   ADMIN VIEW
+   ADMIN USERS VIEW
 ──────────────────────────────────────── */
-async function loadAdmin(page = 1) {
+async function loadAdminUsers(page = 1) {
   try {
     // Stats
     const statsRes = await apiFetch('/admin/stats');
@@ -567,9 +605,144 @@ async function loadAdmin(page = 1) {
     `).join('');
     
     refreshIcons();
-    renderPagination('pagination-admin-users', usersRes.metadata.page, usersRes.metadata.total_pages, loadAdmin);
+    renderPagination('pagination-admin-users', usersRes.metadata.page, usersRes.metadata.total_pages, loadAdminUsers);
   } catch(err) {
     showToast('Admin error: ' + err.message, 'error');
+  }
+}
+
+/* ─────────────────────────────────────────
+   ADMIN LINKS VIEW
+──────────────────────────────────────── */
+async function loadAdminLinks(page = 1) {
+  try {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: '10',
+    });
+    
+    if (state.adminUrlSearch) {
+      params.append('search', state.adminUrlSearch);
+    }
+    
+    if (state.adminUrlSort) {
+      params.append('sort', state.adminUrlSort);
+    }
+    
+    const res = await apiFetch(`/admin/urls?${params.toString()}`);
+    let urls = res.data || [];
+    
+    // Filter URLs based on selected tab
+    if (state.adminUrlFilter === 'active') {
+      urls = urls.filter(u => u.is_active !== false);
+    }
+    
+    // Filter by specific user if selected
+    if (state.adminUrlUserId) {
+      urls = urls.filter(u => u.user_id === state.adminUrlUserId);
+    }
+    
+    const tbody = $('tbody-admin-urls');
+    if (!urls.length) {
+      const emptyMsg = state.adminUrlUserId 
+        ? 'No routes found for this user.' 
+        : (state.adminUrlFilter === 'active' ? 'No active routes.' : 'No routes found.');
+      tbody.innerHTML = `<tr><td colspan="6" class="table-empty">${emptyMsg}</td></tr>`;
+      $('pagination-admin-urls').innerHTML = '';
+      return;
+    }
+    
+    tbody.innerHTML = urls.map(u => {
+      const ownerName = u.user_first_name && u.user_last_name 
+        ? `${u.user_first_name} ${u.user_last_name}` 
+        : (u.user_id || 'N/A');
+      const ownerDisplay = u.user_id 
+        ? `<span class="user-link" onclick="filterByUser('${u.user_id}', '${ownerName.replace(/'/g, "\\'")}')">${ownerName}</span>`
+        : 'N/A';
+      
+      return `
+      <tr>
+        <td><a href="${u.short_url}" target="_blank" class="short-link data-font">${u.short_url.split('/').pop()}</a></td>
+        <td class="url-orig-cell" title="${u.original_url}">${u.original_url}</td>
+        <td class="data-font text-nebula">${ownerDisplay}</td>
+        <td>
+          <span class="status-badge ${u.is_active !== false ? 'active' : 'inactive'}">
+            <span class="status-dot"></span>${u.is_active !== false ? 'Live' : 'Offline'}
+          </span>
+        </td>
+        <td class="data-font text-nebula">${u.click_count || 0}</td>
+        <td>
+          <div class="table-actions">
+            <label class="toggle-switch" title="Toggle State">
+              <input type="checkbox" ${u.is_active !== false ? 'checked' : ''} onchange="toggleAdminUrl('${u.id}', this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+            <button class="btn btn-danger btn-xs" onclick="deleteAdminUrl('${u.id}')">
+              <i data-lucide="trash-2" class="icon-sm"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+    }).join('');
+    
+    refreshIcons();
+    renderPagination('pagination-admin-urls', res.metadata.page, res.metadata.total_pages, loadAdminLinks);
+  } catch (err) {
+    showToast('Failed to load admin URLs: ' + err.message, 'error');
+  }
+}
+
+function filterByUser(userId, userName) {
+  state.adminUrlUserId = userId;
+  loadAdminLinks(1);
+  
+  // Show filter indicator
+  const header = document.querySelector('#page-admin-links .page-header');
+  const existingIndicator = document.getElementById('user-filter-indicator');
+  if (existingIndicator) existingIndicator.remove();
+  
+  const indicator = document.createElement('div');
+  indicator.id = 'user-filter-indicator';
+  indicator.className = 'filter-indicator';
+  indicator.innerHTML = `
+    <span class="filter-text">Filtering by: <strong>${userName}</strong></span>
+    <button class="btn btn-ghost btn-xs" onclick="clearUserFilter()">
+      <i data-lucide="x" class="icon-sm"></i> Clear
+    </button>
+  `;
+  header.appendChild(indicator);
+  refreshIcons();
+}
+
+function clearUserFilter() {
+  state.adminUrlUserId = null;
+  const indicator = document.getElementById('user-filter-indicator');
+  if (indicator) indicator.remove();
+  loadAdminLinks(1);
+}
+
+async function toggleAdminUrl(id, active) {
+  try {
+    await apiFetch(`/admin/urls/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ is_active: active })
+    });
+    showToast(`Route ${active ? 'Live' : 'Offline'}`);
+    loadAdminLinks(1);
+  } catch(err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function deleteAdminUrl(id) {
+  if (!confirm('Are you sure you want to permanently delete this route?')) return;
+  try {
+    await apiFetch(`/admin/urls/${id}`, { method: 'DELETE' });
+    showToast('Route terminated', 'success');
+    loadAdminLinks(1);
+  } catch(err) {
+    showToast(err.message, 'error');
   }
 }
 
@@ -613,7 +786,7 @@ async function toggleUser(id, active) {
       body: JSON.stringify({ is_active: active })
     });
     showToast(`Identity ${active ? 'activated' : 'suspended'}`);
-    loadAdmin();
+    loadAdminUsers();
   } catch(err) {
     showToast(err.message, 'error');
   }
@@ -627,7 +800,7 @@ async function toggleRole(id, currentRole) {
       body: JSON.stringify({ role: newRole })
     });
     showToast(`Access level updated`);
-    loadAdmin();
+    loadAdminUsers();
   } catch(err) {
     showToast(err.message, 'error');
   }
@@ -657,10 +830,55 @@ function renderPagination(containerId, current, total, loadFn) {
 }
 
 /* ─────────────────────────────────────────
+   TAB HANDLING
+──────────────────────────────────────── */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.urlFilter = btn.dataset.tab;
+    loadMyUrls(1);
+  });
+});
+
+// Admin tabs
+document.querySelectorAll('[data-admin-tab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-admin-tab]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.adminUrlFilter = btn.dataset.adminTab;
+    loadAdminLinks(1);
+  });
+});
+
+// Admin search
+const adminSearchInput = $('admin-url-search');
+if (adminSearchInput) {
+  let searchTimeout;
+  adminSearchInput.addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      state.adminUrlSearch = e.target.value;
+      loadAdminLinks(1);
+    }, 300);
+  });
+}
+
+// Admin sort
+const adminSortSelect = $('admin-url-sort');
+if (adminSortSelect) {
+  adminSortSelect.addEventListener('change', (e) => {
+    state.adminUrlSort = e.target.value;
+    loadAdminLinks(1);
+  });
+}
+
+/* ─────────────────────────────────────────
    BOOT
 ──────────────────────────────────────── */
 (function init() {
   refreshIcons();
+  updateNavbar();
   if (state.token && state.user) {
     enterApp(state.user, state.token);
   } else {

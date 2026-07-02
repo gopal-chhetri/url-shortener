@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ShortURL — Precision Link Engineering</title>
+  <title>⚡ ShortURL</title>
   <meta name="description" content="A high-performance URL shortener and link management platform. Turn messy links into precise, measurable data.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="navbar.css">
   <link rel="stylesheet" href="landing.css">
 </head>
 <body>
@@ -16,14 +17,14 @@
     <div class="beam"></div>
   </div>
 
-  <nav class="glass-nav">
-    <div class="nav-brand">
-      <span class="logo-icon">⚡</span>
+  <nav class="glass-nav" id="top-nav">
+    <a href="landing.html" class="nav-brand">
+      <i data-lucide="zap" class="logo-icon text-pulse"></i>
       <span class="brand-text">ShortURL</span>
-    </div>
+    </a>
     <div class="nav-links">
       <a href="#features">Features</a>
-      <a href="#api">API</a>
+      <a href="/swagger/index.html" target="_blank" rel="noopener" data-docs-link>Docs</a>
       <a href="index.html" class="nav-btn btn-ghost">Sign In</a>
       <a href="index.html" class="nav-btn btn-primary">Start Building</a>
     </div>
@@ -69,7 +70,7 @@
       
       <div class="bento-grid">
         <div class="bento-card span-2 glass-panel">
-          <div class="card-icon">📊</div>
+          <div class="card-icon"><i data-lucide="bar-chart-3" class="text-data"></i></div>
           <h3>Deep Analytics</h3>
           <p>Gain absolute visibility into your audience. Track device profiles, browser fingerprints, and geographic origin in real-time.</p>
           <div class="bento-visual viz-bar-chart">
@@ -81,30 +82,30 @@
         </div>
         
         <div class="bento-card glass-panel">
-          <div class="card-icon">⚡</div>
+          <div class="card-icon"><i data-lucide="zap" class="text-pulse"></i></div>
           <h3>Edge Routing</h3>
           <p>Sub-10ms redirects powered by distributed edge networks. Never lose a click to latency.</p>
         </div>
         
         <div class="bento-card glass-panel">
-          <div class="card-icon">🛡️</div>
+          <div class="card-icon"><i data-lucide="shield-check" class="text-success"></i></div>
           <h3>Link Governance</h3>
           <p>Instantly toggle link states. Protect your brand with granular access controls and audit logs.</p>
           <div class="bento-visual toggle-demo">
             <span class="status-indicator active">Live</span>
           </div>
         </div>
+      </div>
+    </section>
 
-        <div class="bento-card span-2 glass-panel">
-          <div class="card-icon">💻</div>
-          <h3>Developer API</h3>
-          <p>Integrate link generation directly into your CI/CD pipelines or application logic with our robust REST API.</p>
-          <pre class="code-snippet"><code><span class="keyword">POST</span> /api/v1/urls
-{
-  <span class="string">"original_url"</span>: <span class="string">"https://example.com/long"</span>,
-  <span class="string">"slug"</span>: <span class="string">"launch-q3"</span>
-}</code></pre>
-        </div>
+    <section id="privacy" class="cta-section">
+      <div class="cta-content glass-panel" style="max-width: 720px; margin: 0 auto;">
+        <h2>Privacy</h2>
+        <p style="color: var(--nebula); margin-top: 0.75rem;">
+          ShortURL stores only the data required to operate links and analytics: account details,
+          shortened URLs, and anonymous click telemetry (device, browser, and coarse location when available).
+          We do not sell personal data. Contact your administrator to request account deletion.
+        </p>
       </div>
     </section>
 
@@ -120,17 +121,28 @@
   <footer class="glass-footer">
     <div class="footer-content">
       <div class="footer-brand">
-        <span class="logo-icon">⚡</span>
+        <i data-lucide="zap" class="logo-icon text-pulse"></i>
         <span class="brand-text">ShortURL</span>
       </div>
       <div class="footer-links">
-        <a href="#">Documentation</a>
-        <a href="#">Status</a>
-        <a href="#">Privacy</a>
+        <a href="/swagger/index.html" target="_blank" rel="noopener">Documentation</a>
+        <a href="/health" target="_blank" rel="noopener">Status</a>
+        <a href="#privacy">Privacy</a>
       </div>
     </div>
   </footer>
 
+  <script src="https://unpkg.com/lucide@latest"></script>
   <script src="landing.js"></script>
+  <script>lucide.createIcons();</script>
+  <script>
+    fetch('/api/v1/config').then(r => r.json()).then(cfg => {
+      if (cfg.base_url) {
+        document.querySelectorAll('[data-docs-link]').forEach(a => {
+          a.href = cfg.base_url + '/swagger/index.html';
+        });
+      }
+    }).catch(() => {});
+  </script>
 </body>
 </html>

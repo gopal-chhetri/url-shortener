@@ -57,3 +57,9 @@ ORDER BY count DESC;
 
 -- name: CountAllClicks :one
 SELECT COUNT(*) FROM clicks;
+
+-- name: GetClickCountsByURLIDs :many
+SELECT url_id, COUNT(*)::bigint AS click_count
+FROM clicks
+WHERE url_id = ANY($1::uuid[])
+GROUP BY url_id;

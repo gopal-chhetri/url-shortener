@@ -3,16 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShortURL — Dashboard</title>
+  <title>⚡ ShortURL</title>
   <meta name="description" content="ShortURL — A premium URL shortening service with analytics and role-based access control." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="navbar.css" />
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
+
+<nav class="glass-nav" id="top-nav">
+  <a href="landing.html" class="nav-brand">
+    <i data-lucide="zap" class="logo-icon text-pulse"></i>
+    <span class="brand-text">ShortURL</span>
+  </a>
+  <div class="nav-links">
+    <a href="landing.html#features">Features</a>
+    <a href="/swagger/index.html" target="_blank" rel="noopener" data-docs-link>Docs</a>
+    <a href="index.html" class="nav-btn btn-ghost" id="nav-sign-in">Sign In</a>
+    <a href="index.html" class="nav-btn btn-primary" id="nav-cta">Start Building</a>
+  </div>
+</nav>
 
 <!-- ─── LOGIN VIEW ─────────────────────────────────────────────────────────── -->
 <div id="view-login" class="auth-screen">
@@ -86,10 +100,13 @@
         <i data-lucide="layout-dashboard" class="nav-icon"></i> Dashboard
       </a>
       <a href="#" class="nav-item" data-view="my-urls" id="nav-my-urls">
-        <i data-lucide="link" class="nav-icon"></i> Active Links
+        <i data-lucide="link" class="nav-icon"></i> Links
       </a>
-      <a href="#" class="nav-item hidden" data-view="admin" id="nav-admin">
-        <i data-lucide="shield-alert" class="nav-icon"></i> Admin Console
+      <a href="#" class="nav-item hidden" data-view="admin-users" id="nav-admin-users">
+        <i data-lucide="users" class="nav-icon"></i> Users
+      </a>
+      <a href="#" class="nav-item hidden" data-view="admin-links" id="nav-admin-links">
+        <i data-lucide="shield-alert" class="nav-icon"></i> All Links
       </a>
     </nav>
     <div class="sidebar-footer">
@@ -219,9 +236,13 @@
     <!-- ── MY URLS VIEW ────────────────────────────────────────────────────── -->
     <section id="page-my-urls" class="page hidden">
       <header class="page-header">
-        <h2>Active Links Registry</h2>
+        <h2>Links Registry</h2>
         <p class="page-subtitle">Manage your deployed routing endpoints</p>
       </header>
+      <div class="tabs-container">
+        <button class="tab-btn active" data-tab="active" id="tab-active">Active Links</button>
+        <button class="tab-btn" data-tab="all" id="tab-all">All Links</button>
+      </div>
       <div class="card glass-panel">
         <div class="table-wrapper">
           <table class="data-table">
@@ -243,11 +264,11 @@
       </div>
     </section>
 
-    <!-- ── ADMIN VIEW ──────────────────────────────────────────────────────── -->
-    <section id="page-admin" class="page hidden">
+    <!-- ── ADMIN USERS VIEW ─────────────────────────────────────────────────── -->
+    <section id="page-admin-users" class="page hidden">
       <header class="page-header">
-        <h2>System Console</h2>
-        <p class="page-subtitle">Global metrics and identity management</p>
+        <h2>Identity Directory</h2>
+        <p class="page-subtitle">Manage system users and access levels</p>
       </header>
 
       <!-- Admin Stats -->
@@ -301,6 +322,47 @@
       </div>
     </section>
 
+    <!-- ── ADMIN LINKS VIEW ──────────────────────────────────────────────────── -->
+    <section id="page-admin-links" class="page hidden">
+      <header class="page-header">
+        <h2>Route Registry</h2>
+        <p class="page-subtitle">Manage all routing endpoints across the system</p>
+      </header>
+
+      <!-- URLs Management -->
+      <div class="card glass-panel">
+        <div class="card-header">
+          <h3>All Routes</h3>
+        </div>
+        <div class="tabs-container">
+          <button class="tab-btn active" data-admin-tab="active" id="admin-tab-active">Active Routes</button>
+          <button class="tab-btn" data-admin-tab="all" id="admin-tab-all">All Routes</button>
+        </div>
+        <div class="search-sort-bar" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+          <div class="input-wrapper" style="flex: 2;">
+            <i data-lucide="search"></i>
+            <input type="text" id="admin-url-search" placeholder="Search by endpoint or target..." />
+          </div>
+          <select id="admin-url-sort" class="btn btn-ghost btn-sm" style="flex: 1;">
+            <option value="date">Sort by Date</option>
+            <option value="name">Sort by Name</option>
+            <option value="clicks">Sort by Clicks</option>
+          </select>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr><th>Endpoint</th><th>Target</th><th>Owner</th><th>Status</th><th>Clicks</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="tbody-admin-urls">
+              <tr><td colspan="6" class="table-empty">Initializing data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination-admin-urls"></div>
+      </div>
+    </section>
+
   </main>
 </div>
 
@@ -308,5 +370,14 @@
 <div id="toast" class="toast hidden glass-panel"></div>
 
 <script src="app.js"></script>
+<script>
+  fetch('/api/v1/config').then(r => r.json()).then(cfg => {
+    if (cfg.base_url) {
+      document.querySelectorAll('[data-docs-link]').forEach(a => {
+        a.href = cfg.base_url + '/swagger/index.html';
+      });
+    }
+  }).catch(() => {});
+</script>
 </body>
 </html>

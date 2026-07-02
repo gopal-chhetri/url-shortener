@@ -4,7 +4,7 @@ VALUES ($1, $2, $3)
 RETURNING *;
 
 -- name: GetURLByID :one
-SELECT * FROM urls WHERE id = $1 AND is_active = true;
+SELECT * FROM urls WHERE id = $1;
 
 -- name: GetURLByShortURL :one
 SELECT * FROM urls WHERE short_url = $1 AND is_active = true;
@@ -16,10 +16,10 @@ UPDATE urls SET original_url = $2, short_url = $3, updated_at = NOW() WHERE id =
 UPDATE urls SET is_active = false, updated_at = NOW() WHERE id = $1;
 
 -- name: ListURLs :many
-SELECT * FROM urls WHERE user_id = $1 AND is_active = true LIMIT $2 OFFSET $3;
+SELECT * FROM urls WHERE user_id = $1 ORDER BY is_active DESC, created_at DESC LIMIT $2 OFFSET $3;
 
 -- name: GetURLCount :one
-SELECT COUNT(*) FROM urls WHERE user_id = $1 AND is_active = true;
+SELECT COUNT(*) FROM urls WHERE user_id = $1;
 
 -- name: ListAllURLs :many
 SELECT * FROM urls WHERE is_active = true LIMIT $1 OFFSET $2;
@@ -51,3 +51,35 @@ WHERE u.is_active = true
 GROUP BY u.id
 ORDER BY click_count DESC
 LIMIT $1;
+
+-- name: SearchURLs :many
+SELECT * FROM urls 
+WHERE (short_url ILIKE $1 OR original_url ILIKE $1)
+ORDER BY is_active DESC, created_at DESC 
+LIMIT $2 OFFSET $3;
+
+-- name: CountSearchURLs :one
+SELECT COUNT(*) FROM urls 
+WHERE (short_url ILIKE $1 OR original_url ILIKE $1);
+
+-- name: ListAllURLsAdmin :many
+SELECT * FROM urls 
+ORDER BY is_active DESC, created_at DESC 
+LIMIT $1 OFFSET $2;
+
+-- name: ListAllURLsAdminByName :many
+SELECT * FROM urls 
+ORDER BY is_active DESC, short_url ASC 
+LIMIT $1 OFFSET $2;
+
+-- name: CountAllURLsAdmin :one
+SELECT COUNT(*) FROM urls;
+
+-- name: ListURLsByClicks :many
+SELECT u.id, u.short_url, u.original_url, u.user_id, u.is_active, u.created_at, u.updated_at,
+    COUNT(c.id) AS click_count
+FROM urls u
+LEFT JOIN clicks c ON c.url_id = u.id
+GROUP BY u.id
+ORDER BY click_count DESC
+LIMIT $1 OFFSET $2;

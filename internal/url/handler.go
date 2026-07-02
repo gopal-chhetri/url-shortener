@@ -35,6 +35,8 @@ type UrlHandlerInterface interface {
 	ListURLs(c *gin.Context)
 	DeleteURL(c *gin.Context)
 	UpdateURL(c *gin.Context)
+	PatchURLStatus(c *gin.Context)
+	GetURLAnalytics(c *gin.Context)
 }
 
 // URLResponse represents the response for a single URL
@@ -44,6 +46,7 @@ type URLResponse struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 	UserID      string `json:"user_id,omitempty"`
+	IsActive    bool   `json:"is_active"`
 	CreatedAt   string `json:"created_at"`
 	UpdatedAt   string `json:"updated_at"`
 }
@@ -80,6 +83,7 @@ func toURLResponse(url dbgen.Url) URLResponse {
 		ShortURL:    url.ShortUrl,
 		OriginalURL: url.OriginalUrl,
 		UserID:      userID,
+		IsActive:    url.IsActive.Bool,
 		CreatedAt:   url.CreatedAt.Time.String(),
 		UpdatedAt:   url.UpdatedAt.Time.String(),
 	}

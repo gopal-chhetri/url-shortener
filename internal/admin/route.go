@@ -10,7 +10,7 @@ import (
 func SetupAdminRoutes(app *bootstrap.Application, adminGroup *gin.RouterGroup, enforcer *casbin.Enforcer) {
 	repo := NewAdminRepository(app.Database.GetPool())
 	service := NewAdminService(repo, app.Logger)
-	handler := NewAdminHandler(service, app.Logger)
+	handler := NewAdminHandler(service, app.Logger, app.Env)
 
 	// Apply Casbin middleware - all admin routes require 'admin' role
 	authMiddleware := middleware.NewAuthMiddleware(nil, enforcer)
@@ -21,4 +21,7 @@ func SetupAdminRoutes(app *bootstrap.Application, adminGroup *gin.RouterGroup, e
 	adminGroup.GET("/users", handler.ListUsers)
 	adminGroup.PUT("/users/:id/role", handler.UpdateUserRole)
 	adminGroup.PUT("/users/:id/status", handler.UpdateUserStatus)
+	adminGroup.GET("/urls", handler.ListURLs)
+	adminGroup.PUT("/urls/:id/status", handler.UpdateURLStatus)
+	adminGroup.DELETE("/urls/:id", handler.DeleteURL)
 }

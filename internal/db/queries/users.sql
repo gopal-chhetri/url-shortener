@@ -84,3 +84,9 @@ LIMIT $1 OFFSET $2;
 
 -- name: CountAllUsers :one
 SELECT COUNT(*) FROM users;
+
+-- name: GetUsersByIDs :many
+SELECT *
+FROM users
+WHERE id = ANY($1::uuid[])
+ORDER BY created_at DESC;

@@ -1,4 +1,4 @@
-.PHONY: format run build back migrate migrate-down seed swagger gen gobash
+.PHONY: format run build up down migrate migrate-down seed swagger gen gobash
 
 GOBASH = docker exec -it url-shortener /bin/sh
 
@@ -14,8 +14,11 @@ run:
 build:
 	docker compose -f deployments/local-dev/compose.yaml up --build
 
-back:
+up:
 	docker compose -f deployments/local-dev/compose.yaml up
+
+down:
+	docker compose -f deployments/local-dev/compose.yaml down
 
 migrate:
 	@echo "Running database migrations..."

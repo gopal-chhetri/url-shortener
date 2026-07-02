@@ -34,6 +34,17 @@ func (q *Queries) CountAllURLs(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const countAllURLsAdmin = `-- name: CountAllURLsAdmin :one
+SELECT COUNT(*) FROM urls
+`
+
+func (q *Queries) CountAllURLsAdmin(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countAllURLsAdmin)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countAllURLsByDate = `-- name: CountAllURLsByDate :one
 SELECT COUNT(*) FROM urls WHERE is_active = true AND created_at BETWEEN $1 AND $2
 `
@@ -56,6 +67,18 @@ SELECT COUNT(*) FROM urls WHERE is_active = false
 
 func (q *Queries) CountInactiveURLs(ctx context.Context) (int64, error) {
 	row := q.db.QueryRow(ctx, countInactiveURLs)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countSearchURLs = `-- name: CountSearchURLs :one
+SELECT COUNT(*) FROM urls 
+WHERE (short_url ILIKE $1 OR original_url ILIKE $1)
+`
+
+func (q *Queries) CountSearchURLs(ctx context.Context, shortUrl string) (int64, error) {
+	row := q.db.QueryRow(ctx, countSearchURLs, shortUrl)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -149,7 +172,7 @@ func (q *Queries) GetTopURLsByClicks(ctx context.Context, limit int32) ([]GetTop
 }
 
 const getURLByID = `-- name: GetURLByID :one
-SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at FROM urls WHERE id = $1 AND is_active = true
+SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at FROM urls WHERE id = $1
 `
 
 func (q *Queries) GetURLByID(ctx context.Context, id uuid.UUID) (Url, error) {
@@ -187,7 +210,7 @@ func (q *Queries) GetURLByShortURL(ctx context.Context, shortUrl string) (Url, e
 }
 
 const getURLCount = `-- name: GetURLCount :one
-SELECT COUNT(*) FROM urls WHERE user_id = $1 AND is_active = true
+SELECT COUNT(*) FROM urls WHERE user_id = $1
 `
 
 func (q *Queries) GetURLCount(ctx context.Context, userID pgtype.UUID) (int64, error) {
@@ -208,6 +231,84 @@ type ListAllURLsParams struct {
 
 func (q *Queries) ListAllURLs(ctx context.Context, arg ListAllURLsParams) ([]Url, error) {
 	rows, err := q.db.Query(ctx, listAllURLs, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Url
+	for rows.Next() {
+		var i Url
+		if err := rows.Scan(
+			&i.ID,
+			&i.ShortUrl,
+			&i.OriginalUrl,
+			&i.UserID,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAllURLsAdmin = `-- name: ListAllURLsAdmin :many
+SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at FROM urls 
+ORDER BY is_active DESC, created_at DESC 
+LIMIT $1 OFFSET $2
+`
+
+type ListAllURLsAdminParams struct {
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) ListAllURLsAdmin(ctx context.Context, arg ListAllURLsAdminParams) ([]Url, error) {
+	rows, err := q.db.Query(ctx, listAllURLsAdmin, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Url
+	for rows.Next() {
+		var i Url
+		if err := rows.Scan(
+			&i.ID,
+			&i.ShortUrl,
+			&i.OriginalUrl,
+			&i.UserID,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAllURLsAdminByName = `-- name: ListAllURLsAdminByName :many
+SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at FROM urls 
+ORDER BY is_active DESC, short_url ASC 
+LIMIT $1 OFFSET $2
+`
+
+type ListAllURLsAdminByNameParams struct {
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) ListAllURLsAdminByName(ctx context.Context, arg ListAllURLsAdminByNameParams) ([]Url, error) {
+	rows, err := q.db.Query(ctx, listAllURLsAdminByName, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +373,7 @@ func (q *Queries) ListAllURLsByDate(ctx context.Context, arg ListAllURLsByDatePa
 }
 
 const listURLs = `-- name: ListURLs :many
-SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at FROM urls WHERE user_id = $1 AND is_active = true LIMIT $2 OFFSET $3
+SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at FROM urls WHERE user_id = $1 ORDER BY is_active DESC, created_at DESC LIMIT $2 OFFSET $3
 `
 
 type ListURLsParams struct {
@@ -283,6 +384,102 @@ type ListURLsParams struct {
 
 func (q *Queries) ListURLs(ctx context.Context, arg ListURLsParams) ([]Url, error) {
 	rows, err := q.db.Query(ctx, listURLs, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Url
+	for rows.Next() {
+		var i Url
+		if err := rows.Scan(
+			&i.ID,
+			&i.ShortUrl,
+			&i.OriginalUrl,
+			&i.UserID,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listURLsByClicks = `-- name: ListURLsByClicks :many
+SELECT u.id, u.short_url, u.original_url, u.user_id, u.is_active, u.created_at, u.updated_at,
+    COUNT(c.id) AS click_count
+FROM urls u
+LEFT JOIN clicks c ON c.url_id = u.id
+GROUP BY u.id
+ORDER BY click_count DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListURLsByClicksParams struct {
+	Limit  int32
+	Offset int32
+}
+
+type ListURLsByClicksRow struct {
+	ID          uuid.UUID
+	ShortUrl    string
+	OriginalUrl string
+	UserID      pgtype.UUID
+	IsActive    pgtype.Bool
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	ClickCount  int64
+}
+
+func (q *Queries) ListURLsByClicks(ctx context.Context, arg ListURLsByClicksParams) ([]ListURLsByClicksRow, error) {
+	rows, err := q.db.Query(ctx, listURLsByClicks, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListURLsByClicksRow
+	for rows.Next() {
+		var i ListURLsByClicksRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ShortUrl,
+			&i.OriginalUrl,
+			&i.UserID,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ClickCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchURLs = `-- name: SearchURLs :many
+SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at FROM urls 
+WHERE (short_url ILIKE $1 OR original_url ILIKE $1)
+ORDER BY is_active DESC, created_at DESC 
+LIMIT $2 OFFSET $3
+`
+
+type SearchURLsParams struct {
+	ShortUrl string
+	Limit    int32
+	Offset   int32
+}
+
+func (q *Queries) SearchURLs(ctx context.Context, arg SearchURLsParams) ([]Url, error) {
+	rows, err := q.db.Query(ctx, searchURLs, arg.ShortUrl, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

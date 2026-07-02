@@ -36,6 +36,11 @@ func SetupRoute(app *bootstrap.Application, r *gin.Engine) {
 	// Handle all OPTIONS preflight requests on the API group
 	api.OPTIONS("/*path", func(c *gin.Context) { c.Status(204) })
 
+	// Public config endpoint (no authentication required)
+	api.GET("/config", func(c *gin.Context) {
+		c.JSON(200, gin.H{"base_url": app.Env.BaseURL})
+	})
+
 	// Public auth routes (no authentication required)
 	authGroup := api.Group("/auth")
 

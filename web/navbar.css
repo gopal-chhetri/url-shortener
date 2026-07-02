@@ -1,0 +1,98 @@
+/* ============================================================
+   ShortURL — Shared Navbar & Beam Styles
+   Used by both landing.html and index.html
+   ============================================================ */
+
+/* ── The Beam ── */
+.beam-container {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+}
+.beam {
+  width: 100%;
+  height: 200px;
+  background: linear-gradient(to bottom, transparent, var(--pulse), var(--data), transparent);
+  box-shadow: 0 0 20px var(--pulse), 0 0 40px var(--data);
+  animation: drop 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes drop {
+  0% { transform: translateY(-200px); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(150vh); opacity: 0; }
+}
+
+/* ── Navigation ── */
+.glass-nav {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 1200px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: rgba(9, 7, 20, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: var(--glass-border);
+  border-radius: 100px;
+  z-index: var(--nav-z-index, 100);
+}
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.2rem;
+  background: linear-gradient(135deg, var(--starlight), var(--nebula));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-decoration: none;
+}
+.nav-brand .logo-icon { font-size: 1.2rem; -webkit-text-fill-color: initial; }
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+.nav-links a:not(.nav-btn) {
+  color: var(--nebula);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+.nav-links a:not(.nav-btn):hover { color: var(--starlight); }
+
+.nav-btn {
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 100px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.nav-btn.btn-ghost { color: var(--starlight); background: transparent; }
+.nav-btn.btn-ghost:hover { background: var(--ghost); }
+.nav-btn.btn-primary {
+  background: var(--pulse);
+  color: #fff;
+  box-shadow: 0 0 15px var(--pulse-glow);
+}
+.nav-btn.btn-primary:hover { filter: brightness(1.1); }
+
+/* ── Utilities ── */
+.text-pulse { color: var(--pulse); }
+.text-data { color: var(--data); }
+.text-success { color: var(--success); }
