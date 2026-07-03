@@ -3,6 +3,23 @@ services:
     image: ghcr.io/${GITHUB_REPOSITORY:-gopal-chhetri/url-shortener}:${IMAGE_TAG:-latest}
     ports:
       - "7500:7500"
+    environment:
+      - APP_ENV=${APP_ENV}
+      - BASE_URL=${BASE_URL}
+      - PORT=${PORT}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=${REDIS_DB}
+      - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET}
+      - ACCESS_TOKEN_EXPIRY_MINUTE=${ACCESS_TOKEN_EXPIRY_MINUTE}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+      - REFRESH_TOKEN_EXPIRY_MINUTE=${REFRESH_TOKEN_EXPIRY_MINUTE}
     depends_on:
       db:
         condition: service_healthy

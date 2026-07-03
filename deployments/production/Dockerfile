@@ -40,6 +40,9 @@ COPY --from=builder /app/server .
 # Copy migrations
 COPY --from=builder /app/migrations ./migrations
 
+# Copy Casbin RBAC config
+COPY --from=builder /app/internal/infra/rbac_model.conf ./internal/infra/rbac_model.conf
+
 # Copy frontend files
 COPY --from=builder /app/web ./web
 
