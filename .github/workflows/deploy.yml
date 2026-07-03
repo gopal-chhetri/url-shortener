@@ -77,6 +77,9 @@ jobs:
       id-token: write
       contents: read
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Fetch VPS secrets from Infisical
         uses: Infisical/secrets-action@v1.0.16
         with:
@@ -85,6 +88,16 @@ jobs:
           project-slug: ${{ vars.INFISICAL_PROJECT_SLUG }}
           env-slug: "prod"
           secret-path: "/"
+
+      - name: Sync deploy script
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ env.VPS_HOST }}
+          username: ${{ env.VPS_SSH_USER }}
+          key: ${{ env.VPS_SSH_KEY }}
+          source: "deployments/production/deploy.sh,deployments/production/docker-compose.yml"
+          target: "/opt/url-shortener/deployments/production"
+          strip_components: 2
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
@@ -96,6 +109,7 @@ jobs:
             SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
             IMAGE_TAG="main-${SHORT_SHA}"
             cd /opt/url-shortener/deployments/production
+            chmod +x deploy.sh
             export INFISICAL_CLIENT_ID="${{ secrets.INFISICAL_CLIENT_ID }}"
             export INFISICAL_CLIENT_SECRET="${{ secrets.INFISICAL_CLIENT_SECRET }}"
             export INFISICAL_PROJECT_ID="${{ vars.INFISICAL_PROJECT_ID }}"
