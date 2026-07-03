@@ -42,6 +42,7 @@ COPY --from=builder /app/migrations ./migrations
 
 # Copy Casbin RBAC config
 COPY --from=builder /app/internal/infra/rbac_model.conf ./internal/infra/rbac_model.conf
+COPY --from=builder /app/internal/infra/rbac_policy.csv ./internal/infra/rbac_policy.csv
 
 # Copy frontend files
 COPY --from=builder /app/web ./web
