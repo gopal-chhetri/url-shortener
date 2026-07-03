@@ -26,7 +26,7 @@ jobs:
         run: go mod verify
 
       - name: Run tests
-        run: go test ./... -v -race -count=1
+        run: go test ./... -race -count=1
 
   build:
     name: Build
@@ -63,3 +63,4 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
+          install-mode: go
