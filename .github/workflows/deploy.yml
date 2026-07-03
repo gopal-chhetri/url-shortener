@@ -93,7 +93,7 @@ jobs:
           username: ${{ env.VPS_SSH_USER }}
           key: ${{ env.VPS_SSH_KEY }}
           script: |
-            cd /opt/url-shortener
+            cd /opt/url-shortener/deployments/production
             export INFISICAL_CLIENT_ID="${{ secrets.INFISICAL_CLIENT_ID }}"
             export INFISICAL_CLIENT_SECRET="${{ secrets.INFISICAL_CLIENT_SECRET }}"
             export INFISICAL_PROJECT_ID="${{ vars.INFISICAL_PROJECT_ID }}"
