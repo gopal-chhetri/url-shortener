@@ -73,6 +73,14 @@ infisical run \
     --env="prod" \
     -- docker compose pull $APP_SERVICE
 
+# ── Ensure database and cache are running ──
+echo ""
+echo ">>> Ensuring database and cache services are running..."
+infisical run \
+    --projectId="$INFISICAL_PROJECT_ID" \
+    --env="prod" \
+    -- docker compose up -d db redis
+
 # ── Run migrations (with secrets injected) ──
 echo ""
 echo ">>> Running migrations..."
