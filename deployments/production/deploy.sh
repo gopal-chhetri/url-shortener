@@ -57,6 +57,14 @@ fi
 
 echo "Deploying: ghcr.io/gopal-chhetri/url-shortener:${IMAGE_TAG}"
 
+# ── Log in to GHCR ──
+echo ""
+echo ">>> Authenticating Docker with GitHub Container Registry..."
+infisical run \
+    --projectId="$INFISICAL_PROJECT_ID" \
+    --env="prod" \
+    -- sh -c 'echo "$REGISTRY_PASSWORD" | docker login ghcr.io -u "$REGISTRY_USERNAME" --password-stdin'
+
 # ── Pull new image (with secrets injected) ──
 echo ""
 echo ">>> Pulling image..."
