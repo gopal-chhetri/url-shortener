@@ -53,13 +53,6 @@ func NewAdminRepository(pool *pgxpool.Pool) AdminRepositoryInterface {
 	}
 }
 
-func (r *AdminRepository) getQuerier(tx pgx.Tx) *dbgen.Queries {
-	if tx != nil {
-		return r.queries.WithTx(tx)
-	}
-	return r.queries
-}
-
 func translateError(err error, model string) error {
 	if err == nil {
 		return nil

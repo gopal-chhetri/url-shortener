@@ -63,7 +63,7 @@ func (s *AuthService) Register(ctx context.Context, req RegisterRequest) (*AuthR
 		s.logger.Error("Failed to begin transaction", zap.Error(err))
 		return nil, err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	user, err := s.userRepo.CreateUser(ctx, CreateUserDTO{
 		Email:        req.Email,
