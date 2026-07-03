@@ -93,8 +93,10 @@ jobs:
           username: ${{ env.VPS_SSH_USER }}
           key: ${{ env.VPS_SSH_KEY }}
           script: |
+            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+            IMAGE_TAG="main-${SHORT_SHA}"
             cd /opt/url-shortener/deployments/production
             export INFISICAL_CLIENT_ID="${{ secrets.INFISICAL_CLIENT_ID }}"
             export INFISICAL_CLIENT_SECRET="${{ secrets.INFISICAL_CLIENT_SECRET }}"
             export INFISICAL_PROJECT_ID="${{ vars.INFISICAL_PROJECT_ID }}"
-            ./deploy.sh ${{ needs.build-and-push.outputs.image_tag }}
+            ./deploy.sh "${IMAGE_TAG}"
