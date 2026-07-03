@@ -31,7 +31,7 @@ jobs:
           echo "Deploying image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
 
       - name: Fetch secrets from Infisical
-        uses: Infisical/secrets-action@v1.0.9
+        uses: Infisical/secrets-action@v1.0.16
         with:
           method: "oidc"
           identity-id: ${{ vars.INFISICAL_IDENTITY_ID }}
@@ -73,9 +73,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-push
     environment: production
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Fetch VPS secrets from Infisical
-        uses: Infisical/secrets-action@v1.0.9
+        uses: Infisical/secrets-action@v1.0.16
         with:
           method: "oidc"
           identity-id: ${{ vars.INFISICAL_IDENTITY_ID }}
