@@ -95,7 +95,7 @@ jobs:
           host: ${{ env.VPS_HOST }}
           username: ${{ env.VPS_SSH_USER }}
           key: ${{ env.VPS_SSH_KEY }}
-          source: "deployments/production/deploy.sh,deployments/production/compose.yml"
+          source: "deployments/production/deploy.sh,deployments/production/compose.yml,deployments/production/nginx/conf.d/app.conf"
           target: "/opt/url-shortener/deployments/production"
           strip_components: 2
 
