@@ -65,7 +65,13 @@ func SetupRoute(app *bootstrap.Application, r *gin.Engine) {
 
 	// Serve frontend static files
 	r.Static("/app", "./web")
+
+	// Bare domain root should land users on the marketing/landing page
+	r.GET("/", func(c *gin.Context) {
+		c.Redirect(302, "/app/landing.html")
+	})
+
 	r.NoRoute(func(c *gin.Context) {
-		c.File("./web/index.html")
+		c.JSON(404, gin.H{"error": "not found"})
 	})
 }

@@ -8,23 +8,23 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="navbar.css" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="/app/navbar.css" />
+  <link rel="stylesheet" href="/app/style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 
 <nav class="glass-nav" id="top-nav">
-  <a href="landing.html" class="nav-brand">
+  <a href="/app/landing.html" class="nav-brand">
     <i data-lucide="zap" class="logo-icon text-pulse"></i>
     <span class="brand-text">ShortURL</span>
   </a>
   <div class="nav-links">
-    <a href="landing.html#features">Features</a>
+    <a href="/app/landing.html#features">Features</a>
     <a href="/swagger/index.html" target="_blank" rel="noopener" data-docs-link>Docs</a>
-    <a href="index.html" class="nav-btn btn-ghost" id="nav-sign-in">Sign In</a>
-    <a href="index.html" class="nav-btn btn-primary" id="nav-cta">Start Building</a>
+    <a href="/app/index.html" class="nav-btn btn-ghost" id="nav-sign-in">Sign In</a>
+    <a href="/app/index.html" class="nav-btn btn-primary" id="nav-cta">Start Building</a>
   </div>
 </nav>
 
@@ -369,7 +369,7 @@
 <!-- Toast notification -->
 <div id="toast" class="toast hidden glass-panel"></div>
 
-<script src="app.js"></script>
+<script src="/app/app.js"></script>
 <script>
   fetch('/api/v1/config').then(r => r.json()).then(cfg => {
     if (cfg.base_url) {

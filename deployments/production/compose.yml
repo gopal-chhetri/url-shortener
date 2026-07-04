@@ -1,9 +1,11 @@
 services:
   app:
+    container_name: url_shortener_app
     image: ghcr.io/${GITHUB_REPOSITORY:-gopal-chhetri/url-shortener}:${IMAGE_TAG:-latest}
     environment:
       - APP_ENV=${APP_ENV}
       - BASE_URL=${BASE_URL}
+      - DOMAIN=${DOMAIN}
       - PORT=${PORT:-7500}
       - DB_HOST=db
       - DB_PORT=5432
@@ -34,23 +36,24 @@ services:
       - traefik.enable=true
       - traefik.docker.network=traefik-network
       # HTTP config
-      - traefik.http.routers.url-shortener-http.entrypoints=http
-      - traefik.http.routers.url-shortener-http.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.url_shortener_http.entrypoints=http
+      - traefik.http.routers.url_shortener_http.rule=Host(`${DOMAIN}`)
       # HTTPS config
-      - traefik.http.routers.url-shortener-https.entrypoints=https
-      - traefik.http.routers.url-shortener-https.rule=Host(`${DOMAIN}`)
-      - traefik.http.routers.url-shortener-https.tls=true
-      - traefik.http.routers.url-shortener-https.tls.certresolver=le
-      - traefik.http.routers.url-shortener-https.service=url-shortener-service
+      - traefik.http.routers.url_shortener_https.entrypoints=https
+      - traefik.http.routers.url_shortener_https.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.url_shortener_https.tls=true
+      - traefik.http.routers.url_shortener_https.tls.certresolver=le
+      - traefik.http.routers.url_shortener_https.service=url_shortener_service
       # Service config
-      - traefik.http.services.url-shortener-service.loadbalancer.server.port=${PORT:-7500}
+      - traefik.http.services.url_shortener_service.loadbalancer.server.port=${PORT:-7500}
       # HTTPS redirect middleware
-      - traefik.http.routers.url-shortener-http.middlewares=https-redirect
+      - traefik.http.routers.url_shortener_http.middlewares=https-redirect
     networks:
       - traefik-network
       - default
 
   migrate:
+    container_name: url_shortener_migrate
     image: migrate/migrate:v4.19.0
     volumes:
       - ./migrations:/migrations
@@ -64,6 +67,7 @@ services:
     restart: "no"
 
   db:
+    container_name: url_shortener_db
     image: postgis/postgis:15-3.4-alpine
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -79,6 +83,7 @@ services:
     restart: unless-stopped
 
   redis:
+    container_name: url_shortener_redis
     image: redis:7-alpine
     command: redis-server --requirepass ${REDIS_PASSWORD}
     volumes:

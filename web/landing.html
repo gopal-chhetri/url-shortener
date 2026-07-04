@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="navbar.css">
-  <link rel="stylesheet" href="landing.css">
+  <link rel="stylesheet" href="/app/navbar.css">
+  <link rel="stylesheet" href="/app/landing.css">
 </head>
 <body>
   
@@ -18,15 +18,15 @@
   </div>
 
   <nav class="glass-nav" id="top-nav">
-    <a href="landing.html" class="nav-brand">
+    <a href="/app/landing.html" class="nav-brand">
       <i data-lucide="zap" class="logo-icon text-pulse"></i>
       <span class="brand-text">ShortURL</span>
     </a>
     <div class="nav-links">
       <a href="#features">Features</a>
       <a href="/swagger/index.html" target="_blank" rel="noopener" data-docs-link>Docs</a>
-      <a href="index.html" class="nav-btn btn-ghost">Sign In</a>
-      <a href="index.html" class="nav-btn btn-primary">Start Building</a>
+      <a href="/app/index.html" class="nav-btn btn-ghost">Sign In</a>
+      <a href="/app/index.html" class="nav-btn btn-primary">Start Building</a>
     </div>
   </nav>
 
@@ -113,7 +113,7 @@
       <div class="cta-content glass-panel">
         <h2>Ready to optimize your links?</h2>
         <p>Join thousands of developers and marketers building better digital experiences.</p>
-        <a href="index.html" class="btn-primary large">Create Free Account</a>
+        <a href="/app/index.html" class="btn-primary large">Create Free Account</a>
       </div>
     </section>
   </main>
@@ -133,7 +133,7 @@
   </footer>
 
   <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="landing.js"></script>
+  <script src="/app/landing.js"></script>
   <script>lucide.createIcons();</script>
   <script>
     fetch('/api/v1/config').then(r => r.json()).then(cfg => {

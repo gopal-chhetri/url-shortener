@@ -100,7 +100,7 @@ function updateNavbar() {
   } else {
     signIn.classList.remove('hidden');
     cta.textContent = 'Start Building';
-    cta.href = 'index.html';
+    cta.href = '/app/index.html';
     cta.onclick = null;
   }
 }
