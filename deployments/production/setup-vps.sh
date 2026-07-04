@@ -9,7 +9,7 @@ set -e
 
 VPS=${1:?Usage: setup-vps.sh <vps-ip> <ssh-user>}
 USER=${2:?Usage: setup-vps.sh <vps-ip> <ssh-user>}
-REMOTE_DIR="/opt/url-shortener/deployments/production"
+REMOTE_DIR="/opt/app/url-shortener/deployments/production"
 DEPLOY_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo ">>> Setting up VPS: $USER@$VPS"
@@ -34,6 +34,11 @@ echo ""
 echo ">>> Copying deployment files..."
 scp "$DEPLOY_DIR/compose.yml" "$DEPLOY_DIR/deploy.sh" "$USER@$VPS:$REMOTE_DIR/"
 scp -r "$DEPLOY_DIR/migrations" "$USER@$VPS:$REMOTE_DIR/"
+
+# ── Ensure traefik-network exists ──
+echo ""
+echo ">>> Ensuring traefik-network exists..."
+ssh "$USER@$VPS" "docker network create traefik-network 2>/dev/null || true"
 
 # ── Make deploy.sh executable ──
 echo ""

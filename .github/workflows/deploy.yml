@@ -95,8 +95,8 @@ jobs:
           host: ${{ env.VPS_HOST }}
           username: ${{ env.VPS_SSH_USER }}
           key: ${{ env.VPS_SSH_KEY }}
-          source: "deployments/production/deploy.sh,deployments/production/compose.yml,deployments/production/nginx/conf.d/app.conf"
-          target: "/opt/url-shortener/deployments/production"
+          source: "deployments/production/deploy.sh,deployments/production/compose.yml"
+          target: "/opt/app/url-shortener/deployments/production"
           strip_components: 2
 
       - name: Deploy via SSH
@@ -109,7 +109,7 @@ jobs:
           script: |
             SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
             IMAGE_TAG="main-${SHORT_SHA}"
-            cd /opt/url-shortener/deployments/production
+            cd /opt/app/url-shortener/deployments/production
             echo "$REGISTRY_PASSWORD" | docker login ghcr.io -u "$REGISTRY_USERNAME" --password-stdin
             chmod +x deploy.sh
             export INFISICAL_CLIENT_ID="${{ secrets.INFISICAL_CLIENT_ID }}"

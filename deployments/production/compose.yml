@@ -1,33 +1,10 @@
 services:
-  nginx:
-    image: nginx:1.27-alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - certbot-etc:/etc/letsencrypt
-      - certbot-www:/var/www/certbot
-    depends_on:
-      - app
-    restart: unless-stopped
-
-  certbot:
-    image: certbot/certbot:latest
-    volumes:
-      - certbot-etc:/etc/letsencrypt
-      - certbot-www:/var/www/certbot
-    entrypoint: >
-      /bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'
-
   app:
     image: ghcr.io/${GITHUB_REPOSITORY:-gopal-chhetri/url-shortener}:${IMAGE_TAG:-latest}
-    expose:
-      - "7500"
     environment:
       - APP_ENV=${APP_ENV}
       - BASE_URL=${BASE_URL}
-      - PORT=${PORT}
+      - PORT=${PORT:-7500}
       - DB_HOST=db
       - DB_PORT=5432
       - DB_NAME=${DB_NAME}
@@ -48,11 +25,30 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:7500/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:${PORT:-7500}/health"]
       interval: 30s
       timeout: 3s
       start_period: 5s
       retries: 3
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-network
+      # HTTP config
+      - traefik.http.routers.url-shortener-http.entrypoints=http
+      - traefik.http.routers.url-shortener-http.rule=Host(`${DOMAIN}`)
+      # HTTPS config
+      - traefik.http.routers.url-shortener-https.entrypoints=https
+      - traefik.http.routers.url-shortener-https.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.url-shortener-https.tls=true
+      - traefik.http.routers.url-shortener-https.tls.certresolver=le
+      - traefik.http.routers.url-shortener-https.service=url-shortener-service
+      # Service config
+      - traefik.http.services.url-shortener-service.loadbalancer.server.port=${PORT:-7500}
+      # HTTPS redirect middleware
+      - traefik.http.routers.url-shortener-http.middlewares=https-redirect
+    networks:
+      - traefik-network
+      - default
 
   migrate:
     image: migrate/migrate:v4.19.0
@@ -97,5 +93,7 @@ services:
 volumes:
   pgdata:
   redisdata:
-  certbot-etc:
-  certbot-www:
+
+networks:
+  traefik-network:
+    external: true

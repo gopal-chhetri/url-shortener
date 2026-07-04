@@ -166,7 +166,7 @@ Run from your local machine (one-time setup):
 ./deployments/production/setup-vps.sh <vps-ip> <ssh-user>
 ```
 
-This installs Docker and copies deployment files to `/opt/url-shortener/deployments/production/`.
+This installs Docker and copies deployment files to `/opt/app/url-shortener/deployments/production/`.
 
 #### 4. Configure VPS environment
 
@@ -181,7 +181,7 @@ export INFISICAL_PROJECT_ID="<project-uuid>"
 #### 5. Deploy
 
 ```bash
-cd /opt/url-shortener/deployments/production
+cd /opt/app/url-shortener/deployments/production
 ./deploy.sh latest
 ```
 

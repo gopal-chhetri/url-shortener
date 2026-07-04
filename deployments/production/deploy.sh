@@ -57,6 +57,14 @@ fi
 
 echo "Deploying: ghcr.io/gopal-chhetri/url-shortener:${IMAGE_TAG}"
 
+# ── Validate required environment variables ──
+echo ""
+echo ">>> Validating environment variables..."
+if [ -z "$INFISICAL_PROJECT_ID" ]; then
+    echo "!!! ERROR: INFISICAL_PROJECT_ID not set"
+    exit 1
+fi
+
 # ── Log in to GHCR ──
 echo ""
 echo ">>> Authenticating Docker with GitHub Container Registry..."
