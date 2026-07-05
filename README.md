@@ -1,6 +1,92 @@
 # ShortURL
 
 A high-performance URL shortening service with analytics, role-based access control, and real-time telemetry.
+Live hosted on [shorturl.soylab.dpdns.org](https://shorturl.soylab.dpdns.org/).
+
+## System Architecture
+
+### 1. URL Creation Flow (Long to Short)
+```mermaid
+sequenceDiagram
+    actor User
+    participant Client as Web App / Client
+    participant Gin as Go API (Gin)
+    participant Redis as Redis Cache
+    participant DB as PostgreSQL DB
+
+    User->>Client: Input Long URL (+ Optional Custom Slug)
+    Client->>Gin: POST /api/v1/urls
+    activate Gin
+    alt Custom Slug Provided
+        Gin->>DB: Check if custom slug exists
+        DB-->>Gin: Result
+    else Auto-generate Slug
+        Gin->>Gin: Generate unique base62 slug
+        Gin->>DB: Check if slug exists (collision check)
+        DB-->>Gin: Result
+    end
+    
+    Gin->>DB: INSERT into urls table
+    DB-->>Gin: Success
+    
+    Gin->>Redis: SET url:code:<slug> -> URL JSON
+    Gin-->>Client: 201 Created (with short URL)
+    deactivate Gin
+    Client-->>User: Display shortened URL
+```
+
+### 2. URL Redirection Flow
+```mermaid
+sequenceDiagram
+    actor Visitor
+    participant Browser
+    participant Gin as Go API (Gin)
+    participant Redis as Redis Cache
+    participant DB as PostgreSQL DB
+
+    Visitor->>Browser: Visit short URL (/:code)
+    Browser->>Gin: GET /:code
+    activate Gin
+    
+    Gin->>Redis: GET url:code:<code>
+    alt Cache Hit
+        Redis-->>Gin: Return URL JSON
+    else Cache Miss
+        Redis-->>Gin: nil
+        Gin->>DB: SELECT original_url FROM urls WHERE short_url = <code> AND is_active = true
+        DB-->>Gin: Return URL details
+        Gin->>Redis: SET url:code:<code> -> URL JSON
+    end
+
+    Note over Gin: Track click in background using context.WithoutCancel
+    
+    Gin-->>Browser: 302 Found (Redirect to Original URL)
+    deactivate Gin
+    Browser->>Visitor: Load target website
+```
+
+### 3. Deployment & CI/CD Pipeline
+```mermaid
+graph TD
+    Developer[Developer] -->|git push| GitHub[GitHub Repository]
+    
+    subgraph CI/CD (GitHub Actions)
+        GitHub --> CI[CI Workflow: Lint & Test]
+        CI --> CD[CD Workflow: Build Docker Image]
+        CD --> GHCR[Push to GitHub Container Registry]
+    end
+
+    subgraph VPS Deployment
+        GHCR -->|docker pull| VPS[Production VPS]
+        Infisical[Infisical Cloud] -->|Fetch Secrets| VPS
+        VPS -->|Runs| App[App Container]
+        VPS -->|Runs| Redis[Redis Container]
+        VPS -->|Runs| DB[Postgres Container]
+        Cloudflare[Cloudflare] -->|Proxy Traffic| VPS
+    end
+    
+    CD -->|Trigger deploy.sh| VPS
+```
 
 ## Features
 
@@ -54,74 +140,15 @@ docker compose up --build
 
 The app will be available at `http://localhost:8080`.
 
-### Manual Setup
-
-```bash
-# Start PostgreSQL and Redis (or use Docker)
-docker compose -f deployments/local-dev/compose.yaml up db redis -d
-
-# Install dependencies
-go mod download
-
-# Run database migrations
-migrate -database "postgres://postgres:password@localhost:5432/url-shortener?sslmode=disable" -path migrations up
-
-# Generate swagger docs
-make swagger
-
-# Start the server
-make run
-```
-
-### Available Commands
-
-| Command | Description |
-|---------|-------------|
-| `make run` | Start with hot reload (Air) |
-| `make build` | Build and run with Docker Compose |
-| `make up` | Start Docker containers |
-| `make down` | Stop Docker containers |
-| `make migrate` | Run database migrations |
-| `make migrate-down` | Rollback migrations |
-| `make swagger` | Generate swagger docs |
-| `make gen` | Generate SQLC code |
-| `make format` | Format Go code |
 
 ## Environment Variables
 
 Copy `deployments/local-dev/.env.sample` to `deployments/local-dev/.env` and configure:
 
-```env
-# Database
-DB_HOST=db
-DB_PORT=5432
-DB_NAME=url-shortener
-DB_USER=postgres
-DB_PASS=password
-
-# Application
-BASE_URL=http://localhost:8080
-PORT=8080
-APP_ENV=LOCAL
-
-# Redis
-REDIS_HOST=redis
-REDIS_PORT=6379
-REDIS_PASSWORD=
-REDIS_DB=0
-
-# Auth
-ACCESS_TOKEN_SECRET=your-secret-key
-REFRESH_TOKEN_SECRET=your-refresh-secret
-ACCESS_TOKEN_EXPIRY_MINUTE=3600
-REFRESH_TOKEN_EXPIRY_MINUTE=10080
-```
-
 ## API Documentation
 
 Once running, visit:
 - **Swagger UI**: `http://localhost:8080/swagger/index.html`
-- **Health Check**: `http://localhost:8080/health`
 
 ### Key Endpoints
 
@@ -134,56 +161,6 @@ Once running, visit:
 | GET | `/api/v1/urls` | List user's URLs | Yes |
 | DELETE | `/api/v1/urls/:id` | Deactivate URL | Yes |
 | GET | `/api/v1/urls/:id/analytics` | Get URL analytics | Yes |
-
-## Deployment
-
-### Docker-Only Deployment (No Source Code on VPS)
-
-The VPS only receives deployment artifacts (compose.yml, deploy.sh, migrations). The Docker image is pulled from GHCR.
-
-#### 1. Set up Infisical
-
-Create account at [app.infisical.com](https://app.infisical.com):
-- Create project `url-shortener` with environments `dev` and `prod`
-- Create machine identities:
-  - `github-actions` — OIDC auth (for GitHub Actions CI/CD)
-  - `vps-deploy` — Universal Auth (for VPS deploy script)
-- Add all secrets to `prod` environment
-
-#### 2. Set up Cloudflare
-
-Add DNS A record:
-- **Type**: A
-- **Name**: `shorturl` (or your subdomain)
-- **IPv4**: Your VPS IP
-- **Proxy**: ON (orange cloud)
-
-#### 3. Set up VPS
-
-Run from your local machine (one-time setup):
-
-```bash
-./deployments/production/setup-vps.sh <vps-ip> <ssh-user>
-```
-
-This installs Docker and copies deployment files to `/opt/app/url-shortener/deployments/production/`.
-
-#### 4. Configure VPS environment
-
-SSH into VPS and set Infisical credentials:
-
-```bash
-export INFISICAL_CLIENT_ID="<vps-deploy-client-id>"
-export INFISICAL_CLIENT_SECRET="<vps-deploy-client-secret>"
-export INFISICAL_PROJECT_ID="<project-uuid>"
-```
-
-#### 5. Deploy
-
-```bash
-cd /opt/app/url-shortener/deployments/production
-./deploy.sh latest
-```
 
 ### CI/CD Pipeline
 
@@ -198,54 +175,11 @@ Push to `main` triggers:
 | Push to main | `main-<sha>` | `main-abc1234` |
 | Git tag | `v1.2.3` | `v1.2.3` |
 
-### Rollback
+## Roadmap & TODOs
 
-Automatic rollback on health check failure:
-```bash
-./deploy.sh main-abc1234  # Deploy specific version
-# If health check fails, automatically rolls back
-```
-
-## Project Structure
-
-```
-url-shortener/
-├── cmd/
-│   └── url-shortener/
-│       └── main.go                 # Entry point
-├── internal/
-│   ├── admin/                      # Admin module
-│   ├── auth/                       # Authentication
-│   ├── bootstrap/                  # App initialization
-│   ├── db/sqlc/                    # Generated database code
-│   ├── health/                     # Health check
-│   ├── infra/                      # Infrastructure (config, DB, Redis)
-│   ├── middleware/                  # Auth, CORS, rate limiting
-│   ├── response/                   # API response helpers
-│   ├── routes/                     # Route registration
-│   ├── url/                        # URL shortener core
-│   └── utils/                      # Utilities
-├── migrations/                     # Database migrations
-├── web/                            # Frontend (HTML/CSS/JS)
-│   ├── index.html                  # Dashboard SPA
-│   ├── landing.html                # Landing page
-│   ├── app.js                      # Dashboard logic
-│   ├── navbar.css                  # Shared navbar styles
-│   └── style.css                   # Dashboard styles
-├── deployments/
-│   ├── local-dev/                  # Docker Compose for development
-│   └── production/                 # Production deployment
-│       ├── Dockerfile              # Multi-stage build
-│       ├── compose.yml             # Production Docker Compose
-│       ├── deploy.sh               # Deploy + rollback script
-│       ├── setup-vps.sh            # One-time VPS setup (no source code)
-│       ├── migrations/             # SQL migration files (deployment bundle)
-│       └── .env.example            # Infisical credential template
-├── docs/                           # Swagger documentation
-└── .github/workflows/              # GitHub Actions
-    ├── ci.yml                      # CI pipeline
-    └── deploy.yml                  # CD pipeline
-```
+- [ ] Add unit and integration test coverage for core redirection flows.
+- [ ] Migrate infrastructure from Docker Compose to **Kubernetes** to allow horizontal scaling of the Go API instances.
+- [ ] Implement geo-location tracking for click analytics.
 
 ## License
 
