@@ -69,35 +69,38 @@ sequenceDiagram
 ```mermaid
 graph TD
     Developer[Developer] -->|git push| GitHub[GitHub Repository]
-    
-    subgraph CI/CD (GitHub Actions)
-        GitHub --> CI[CI Workflow: Lint & Test]
-        CI --> CD[CD Workflow: Build Docker Image]
-        CD --> GHCR[Push to GitHub Container Registry]
+
+    subgraph cicd ["CI/CD - GitHub Actions"]
+        GitHub --> CI["CI - Lint and Test"]
+        CI --> CD["CD - Build Docker Image"]
+        CD --> GHCR[Push to GHCR]
+        CD --> PrepVPS["Ensure VPS directory permissions"]
+        PrepVPS --> SCP["SCP deploy.sh, compose.yml, migrations"]
+        SCP --> DeploySSH["SSH - run deploy.sh"]
     end
 
-    subgraph VPS Deployment
+    subgraph vps ["VPS Deployment"]
         GHCR -->|docker pull| VPS[Production VPS]
+        DeploySSH --> VPS
         Infisical[Infisical Cloud] -->|Fetch Secrets| VPS
-        VPS -->|Runs| App[App Container]
-        VPS -->|Runs| Redis[Redis Container]
-        VPS -->|Runs| DB[Postgres Container]
+        VPS --> App[App Container]
+        VPS --> Redis[Redis Container]
+        VPS --> DB[Postgres Container]
+        VPS --> Migrate[Migrate Container]
         Cloudflare[Cloudflare] -->|Proxy Traffic| VPS
     end
-    
-    CD -->|Trigger deploy.sh| VPS
 ```
 
 ## Features
 
-- **URL Shortening** — Create short URLs with custom or auto-generated slugs
-- **Click Analytics** — Track device type, browser, and geographic origin
-- **Role-Based Access** — Admin and user roles with Casbin RBAC
-- **Redis Caching** — Cache-aside pattern for fast URL lookups
-- **Rate Limiting** — Configurable request throttling
-- **Admin Panel** — Manage users, URLs, and view system stats
-- **Landing Page** — Marketing page with interactive terminal demo
-- **Health Check** — `/health` endpoint for monitoring
+- **URL Shortening** :Create short URLs with custom or auto-generated slugs
+- **Click Analytics** :Track device type, browser, and geographic origin
+- **Role-Based Access** :Admin and user roles with Casbin RBAC
+- **Redis Caching** :Cache-aside pattern for fast URL lookups
+- **Rate Limiting** :Configurable request throttling
+- **Admin Panel** :Manage users, URLs, and view system stats
+- **Landing Page** :Marketing page with interactive terminal demo
+- **Health Check** :`/health` endpoint for monitoring
 
 ## Tech Stack
 
@@ -166,7 +169,7 @@ Once running, visit:
 
 Push to `main` triggers:
 1. **CI**: Lint → Test → Build
-2. **CD**: Build Docker image → Push to GHCR → Deploy to VPS
+2. **CD**: Build Docker image → Push to GHCR → Ensure VPS permissions → SCP deploy files and root `migrations/` → SSH `deploy.sh` on VPS
 
 ### Image Versioning
 

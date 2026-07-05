@@ -2,7 +2,7 @@
 set -e
 
 # ============================================================
-# ShortURL — Production Deploy Script
+# ShortURL :Production Deploy Script
 # Usage: ./deploy.sh <image-tag>
 # Requires: INFISICAL_CLIENT_ID, INFISICAL_CLIENT_SECRET env vars
 # ============================================================

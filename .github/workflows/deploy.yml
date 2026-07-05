@@ -96,8 +96,9 @@ jobs:
           username: ${{ env.VPS_SSH_USER }}
           key: ${{ env.VPS_SSH_KEY }}
           script: |
-            sudo mkdir -p /opt/app/url-shortener/deployments/production
-            sudo chown -R "$(whoami):$(whoami)" /opt/app/url-shortener
+            APP_DIR="/opt/app/url-shortener"
+            sudo mkdir -p "$APP_DIR/deployments/production"
+            sudo chown -R "$(whoami):$(whoami)" "$APP_DIR"
 
       - name: Sync deploy script
         uses: appleboy/scp-action@v0.1.7
@@ -117,9 +118,12 @@ jobs:
           key: ${{ env.VPS_SSH_KEY }}
           envs: REGISTRY_USERNAME,REGISTRY_PASSWORD
           script: |
+            APP_DIR="/opt/app/url-shortener"
+            sudo mkdir -p "$APP_DIR/deployments/production"
+            sudo chown -R "$(whoami):$(whoami)" "$APP_DIR"
             SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
             IMAGE_TAG="main-${SHORT_SHA}"
-            cd /opt/app/url-shortener/deployments/production
+            cd "$APP_DIR/deployments/production"
             echo "$REGISTRY_PASSWORD" | docker login ghcr.io -u "$REGISTRY_USERNAME" --password-stdin
             chmod +x deploy.sh
             export INFISICAL_CLIENT_ID="${{ secrets.INFISICAL_CLIENT_ID }}"
