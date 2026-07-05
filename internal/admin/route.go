@@ -8,7 +8,7 @@ import (
 )
 
 func SetupAdminRoutes(app *bootstrap.Application, adminGroup *gin.RouterGroup, enforcer *casbin.Enforcer) {
-	repo := NewAdminRepository(app.Database.GetPool())
+	repo := NewAdminRepository(app.Database)
 	service := NewAdminService(repo, app.Logger)
 	handler := NewAdminHandler(service, app.Logger, app.Env)
 

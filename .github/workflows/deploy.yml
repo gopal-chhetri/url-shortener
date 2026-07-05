@@ -95,9 +95,9 @@ jobs:
           host: ${{ env.VPS_HOST }}
           username: ${{ env.VPS_SSH_USER }}
           key: ${{ env.VPS_SSH_KEY }}
-          source: "deployments/production/deploy.sh,deployments/production/compose.yml"
-          target: "/opt/app/url-shortener/deployments/production"
-          strip_components: 2
+          source: "deployments/production/deploy.sh,deployments/production/compose.yml,migrations"
+          target: "/opt/app/url-shortener"
+          strip_components: 0
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1

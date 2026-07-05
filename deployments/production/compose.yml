@@ -56,7 +56,7 @@ services:
     container_name: url_shortener_migrate
     image: migrate/migrate:v4.19.0
     volumes:
-      - ./migrations:/migrations
+      - ../migrations:/migrations
     command:
       - "-path=/migrations"
       - "-database=postgres://${DB_USER}:${DB_PASS}@db:5432/${DB_NAME}?sslmode=disable"

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/tracelog"
 )
@@ -45,4 +46,14 @@ func (l *pgxLogger) Log(ctx context.Context, level tracelog.LogLevel, msg string
 			data["time"],
 		)
 	}
+}
+
+// BeginTx begins a transaction
+func BeginTx(pool *pgxpool.Pool, ctx context.Context) (pgx.Tx, error) {
+	return pool.Begin(ctx)
+}
+
+// Close closes the pool
+func Close(pool *pgxpool.Pool) {
+	pool.Close()
 }

@@ -6,16 +6,17 @@ import (
 	"log"
 
 	"github.com/gopal-chhetri/url-shortener/internal/bootstrap"
+	"github.com/gopal-chhetri/url-shortener/internal/infra"
 	"github.com/gopal-chhetri/url-shortener/internal/utils"
 )
 
 func main() {
 	fmt.Println("Initializing seeder...")
 	app := bootstrap.NewApplication()
-	defer app.Database.Close()
+	defer infra.Close(app.Database)
 
 	ctx := context.Background()
-	pool := app.Database.GetPool()
+	pool := app.Database
 
 	// Hash password for default users
 	hashedPassword, err := utils.HashPassword("password123")

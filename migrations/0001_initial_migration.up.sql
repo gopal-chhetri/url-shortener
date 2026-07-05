@@ -52,3 +52,28 @@ CREATE TABLE IF NOT EXISTS clicks (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Create trigger function to auto-update updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Apply trigger to roles table
+CREATE TRIGGER update_roles_updated_at BEFORE UPDATE ON roles
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Apply trigger to users table
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Apply trigger to urls table
+CREATE TRIGGER update_urls_updated_at BEFORE UPDATE ON urls
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Apply trigger to clicks table
+CREATE TRIGGER update_clicks_updated_at BEFORE UPDATE ON clicks
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

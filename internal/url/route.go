@@ -9,8 +9,8 @@ import (
 
 func SetupUrlRoute(app *bootstrap.Application, router *gin.Engine, protectedGroup *gin.RouterGroup, enforcer *casbin.Enforcer) {
 	// Initialize repositories
-	urlRepository := NewUrlRepository(app.Database.GetPool())
-	clickRepository := NewClickRepository(app.Database.GetPool())
+	urlRepository := NewUrlRepository(app.Database)
+	clickRepository := NewClickRepository(app.Database)
 
 	// Initialize service with click tracking
 	urlService := NewUrlServiceWithClicks(urlRepository, clickRepository, app.Redis, app.Env, app.Logger)

@@ -6,7 +6,7 @@ import (
 )
 
 func SetupAuthRoute(app *bootstrap.Application, authGroup, authProtected *gin.RouterGroup) {
-	authRepository := NewUserRepository(app.Database.GetPool())
+	authRepository := NewUserRepository(app.Database)
 	authService := NewAuthService(authRepository, app.Env, app.Logger)
 	authHandler := NewAuthHandler(authService, app.Logger)
 	authGroup.POST("/login", authHandler.Login)
