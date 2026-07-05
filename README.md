@@ -93,14 +93,14 @@ graph TD
 
 ## Features
 
-- **URL Shortening** :Create short URLs with custom or auto-generated slugs
-- **Click Analytics** :Track device type, browser, and geographic origin
-- **Role-Based Access** :Admin and user roles with Casbin RBAC
-- **Redis Caching** :Cache-aside pattern for fast URL lookups
-- **Rate Limiting** :Configurable request throttling
-- **Admin Panel** :Manage users, URLs, and view system stats
-- **Landing Page** :Marketing page with interactive terminal demo
-- **Health Check** :`/health` endpoint for monitoring
+- **URL Shortening**: Create short URLs with custom or auto-generated slugs
+- **Click Analytics**: Track device type, browser, and geographic origin
+- **Role-Based Access**: Admin and user roles with Casbin RBAC
+- **Redis Caching**: Cache-aside pattern for fast URL lookups
+- **Rate Limiting**: Configurable request throttling
+- **Admin Panel**: Manage users, URLs, and view system stats
+- **Landing Page**: Marketing page with interactive terminal demo
+- **Health Check**: `/health` endpoint for monitoring
 
 ## Tech Stack
 
@@ -182,6 +182,7 @@ Push to `main` triggers:
 
 - [ ] Add unit and integration test coverage for core redirection flows.
 - [ ] Migrate infrastructure from Docker Compose to **Kubernetes** to allow horizontal scaling of the Go API instances.
+- [ ] Grafana and Prometheus setup for monitoring.
 - [ ] Implement geo-location tracking for click analytics.
 
 ## License

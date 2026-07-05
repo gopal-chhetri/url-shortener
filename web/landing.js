@@ -1,5 +1,5 @@
 /**
- * ShortURL :Landing Page Interactive Elements
+ * ShortURL: Landing Page Interactive Elements
  */
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -2,9 +2,9 @@
 set -e
 
 # ============================================================
-# ShortURL :VPS Setup Script
+# ShortURL: VPS Setup Script
 # Usage: ./setup-vps.sh <vps-ip> <ssh-user>
-# One-time VPS setup :no source code exposed
+# One-time VPS setup: no source code exposed
 # ============================================================
 
 VPS=${1:?Usage: setup-vps.sh <vps-ip> <ssh-user>}

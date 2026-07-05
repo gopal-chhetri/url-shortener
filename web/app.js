@@ -1,5 +1,5 @@
 /**
- * ShortURL :Precision App Logic
+ * ShortURL: Precision App Logic
  * Real API integration with backend services
  */
 
