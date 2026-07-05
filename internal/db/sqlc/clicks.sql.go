@@ -24,9 +24,9 @@ func (q *Queries) CountAllClicks(ctx context.Context) (int64, error) {
 }
 
 const createClick = `-- name: CreateClick :one
-INSERT INTO clicks (user_id, url_id, device, browser, latitude, longitude)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, user_id, url_id, device, browser, latitude, longitude, created_at, updated_at
+INSERT INTO clicks (user_id, url_id, device, browser, latitude, longitude, ip_address, country, city)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, user_id, url_id, device, browser, latitude, longitude, created_at, updated_at, ip_address, country, city
 `
 
 type CreateClickParams struct {
@@ -36,6 +36,9 @@ type CreateClickParams struct {
 	Browser   pgtype.Text
 	Latitude  pgtype.Numeric
 	Longitude pgtype.Numeric
+	IpAddress pgtype.Text
+	Country   pgtype.Text
+	City      pgtype.Text
 }
 
 func (q *Queries) CreateClick(ctx context.Context, arg CreateClickParams) (Click, error) {
@@ -46,6 +49,9 @@ func (q *Queries) CreateClick(ctx context.Context, arg CreateClickParams) (Click
 		arg.Browser,
 		arg.Latitude,
 		arg.Longitude,
+		arg.IpAddress,
+		arg.Country,
+		arg.City,
 	)
 	var i Click
 	err := row.Scan(
@@ -58,6 +64,9 @@ func (q *Queries) CreateClick(ctx context.Context, arg CreateClickParams) (Click
 		&i.Longitude,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IpAddress,
+		&i.Country,
+		&i.City,
 	)
 	return i, err
 }
@@ -98,7 +107,7 @@ func (q *Queries) GetBrowserStatsByURLID(ctx context.Context, urlID pgtype.UUID)
 }
 
 const getClickByID = `-- name: GetClickByID :one
-SELECT id, user_id, url_id, device, browser, latitude, longitude, created_at, updated_at FROM clicks WHERE id = $1
+SELECT id, user_id, url_id, device, browser, latitude, longitude, created_at, updated_at, ip_address, country, city FROM clicks WHERE id = $1
 `
 
 func (q *Queries) GetClickByID(ctx context.Context, id uuid.UUID) (Click, error) {
@@ -114,6 +123,9 @@ func (q *Queries) GetClickByID(ctx context.Context, id uuid.UUID) (Click, error)
 		&i.Longitude,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IpAddress,
+		&i.Country,
+		&i.City,
 	)
 	return i, err
 }
@@ -235,7 +247,7 @@ func (q *Queries) GetClickStatsByURLID(ctx context.Context, urlID pgtype.UUID) (
 }
 
 const getClicksByURLID = `-- name: GetClicksByURLID :many
-SELECT id, user_id, url_id, device, browser, latitude, longitude, created_at, updated_at FROM clicks WHERE url_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3
+SELECT id, user_id, url_id, device, browser, latitude, longitude, created_at, updated_at, ip_address, country, city FROM clicks WHERE url_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3
 `
 
 type GetClicksByURLIDParams struct {
@@ -263,6 +275,9 @@ func (q *Queries) GetClicksByURLID(ctx context.Context, arg GetClicksByURLIDPara
 			&i.Longitude,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.IpAddress,
+			&i.Country,
+			&i.City,
 		); err != nil {
 			return nil, err
 		}
@@ -275,7 +290,7 @@ func (q *Queries) GetClicksByURLID(ctx context.Context, arg GetClicksByURLIDPara
 }
 
 const getClicksByUserID = `-- name: GetClicksByUserID :many
-SELECT id, user_id, url_id, device, browser, latitude, longitude, created_at, updated_at FROM clicks WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3
+SELECT id, user_id, url_id, device, browser, latitude, longitude, created_at, updated_at, ip_address, country, city FROM clicks WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3
 `
 
 type GetClicksByUserIDParams struct {
@@ -303,6 +318,9 @@ func (q *Queries) GetClicksByUserID(ctx context.Context, arg GetClicksByUserIDPa
 			&i.Longitude,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.IpAddress,
+			&i.Country,
+			&i.City,
 		); err != nil {
 			return nil, err
 		}
@@ -349,8 +367,43 @@ func (q *Queries) GetDeviceStatsByURLID(ctx context.Context, urlID pgtype.UUID) 
 	return items, nil
 }
 
+const getGeoStatsByURLID = `-- name: GetGeoStatsByURLID :many
+SELECT 
+    COALESCE(country, 'Unknown') AS country,
+    COUNT(*) AS count
+FROM clicks
+WHERE url_id = $1
+GROUP BY country
+ORDER BY count DESC
+`
+
+type GetGeoStatsByURLIDRow struct {
+	Country string
+	Count   int64
+}
+
+func (q *Queries) GetGeoStatsByURLID(ctx context.Context, urlID pgtype.UUID) ([]GetGeoStatsByURLIDRow, error) {
+	rows, err := q.db.Query(ctx, getGeoStatsByURLID, urlID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetGeoStatsByURLIDRow
+	for rows.Next() {
+		var i GetGeoStatsByURLIDRow
+		if err := rows.Scan(&i.Country, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getRecentClicks = `-- name: GetRecentClicks :many
-SELECT id, user_id, url_id, device, browser, latitude, longitude, created_at, updated_at FROM clicks ORDER BY created_at DESC LIMIT $1 OFFSET $2
+SELECT id, user_id, url_id, device, browser, latitude, longitude, created_at, updated_at, ip_address, country, city FROM clicks ORDER BY created_at DESC LIMIT $1 OFFSET $2
 `
 
 type GetRecentClicksParams struct {
@@ -377,6 +430,9 @@ func (q *Queries) GetRecentClicks(ctx context.Context, arg GetRecentClicksParams
 			&i.Longitude,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.IpAddress,
+			&i.Country,
+			&i.City,
 		); err != nil {
 			return nil, err
 		}

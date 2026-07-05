@@ -8,10 +8,11 @@ import (
 )
 
 type Application struct {
-	Env      *infra.Env
-	Logger   *zap.Logger
-	Database *pgxpool.Pool
-	Redis    *redis.Client
+	Env        *infra.Env
+	Logger     *zap.Logger
+	Database   *pgxpool.Pool
+	Redis      *redis.Client
+	GeoService *infra.GeoService
 }
 
 func NewApplication() *Application {
@@ -19,10 +20,20 @@ func NewApplication() *Application {
 	logger := infra.NewLogger(env)
 	dbConn := infra.NewDb(env)
 	redisClient := infra.NewRedisClient(env, logger)
+
+	var geoService *infra.GeoService
+	if geoDB, err := infra.NewGeoService("./GeoLite2-City.mmdb"); err == nil {
+		geoService = geoDB
+		logger.Info("GeoIP database loaded successfully")
+	} else {
+		logger.Warn("GeoIP database not found, geo-location tracking disabled", zap.Error(err))
+	}
+
 	return &Application{
-		Env:      env,
-		Logger:   logger,
-		Database: dbConn,
-		Redis:    redisClient,
+		Env:        env,
+		Logger:     logger,
+		Database:   dbConn,
+		Redis:      redisClient,
+		GeoService: geoService,
 	}
 }

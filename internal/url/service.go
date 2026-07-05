@@ -3,6 +3,7 @@ package url
 import (
 	"context"
 	"encoding/json"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,12 +22,13 @@ type UrlServiceInterface interface {
 	UpdateURL(ctx context.Context, dto UpdateURLRequest, userID uuid.UUID) (*dbgen.Url, error)
 	UpdateURLStatus(ctx context.Context, id uuid.UUID, userID uuid.UUID, isActive bool) (*dbgen.Url, error)
 	DeleteURL(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
-	ListURLs(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]dbgen.Url, int64, error)
+	ListURLs(ctx context.Context, userID uuid.UUID, limit, offset int32, sortBy string) ([]dbgen.Url, int64, error)
 	GetURLCount(ctx context.Context, userID uuid.UUID) (int64, error)
 	ListAllURLs(ctx context.Context, limit, offset int32) ([]dbgen.Url, int64, error)
-	TrackClick(ctx context.Context, urlID uuid.UUID, device, browser string, userID *uuid.UUID) error
+	TrackClick(ctx context.Context, urlID uuid.UUID, device, browser string, userID *uuid.UUID, ipAddress, country, city string) error
 	GetClickStats(ctx context.Context, urlID uuid.UUID) (dbgen.GetClickStatsByURLIDRow, error)
 	GetURLAnalytics(ctx context.Context, urlID uuid.UUID, userID uuid.UUID) (*URLAnalytics, error)
+	GetClickCountsByURLIDs(ctx context.Context, urlIDs []uuid.UUID) (map[uuid.UUID]int64, error)
 }
 
 type CreateURLRequest struct {
@@ -235,28 +237,64 @@ func (s *UrlService) DeleteURL(ctx context.Context, id uuid.UUID, userID uuid.UU
 	return nil
 }
 
-// ListURLs retrieves paginated URLs for a user
-func (s *UrlService) ListURLs(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]dbgen.Url, int64, error) {
-	// Set default limit if not provided
+func (s *UrlService) ListURLs(ctx context.Context, userID uuid.UUID, limit, offset int32, sortBy string) ([]dbgen.Url, int64, error) {
 	if limit <= 0 {
 		limit = 10
 	}
 	if limit > 100 {
-		limit = 100 // Max limit
+		limit = 100
 	}
 
-	// Get URLs
-	urls, err := s.repo.ListURLs(ctx, ListURLsDTO{
-		UserID: userID,
-		Limit:  limit,
-		Offset: offset,
-	})
-	if err != nil {
-		s.logger.Error("Failed to list URLs", zap.Error(err))
-		return nil, 0, err
+	var urls []dbgen.Url
+	var err error
+
+	if sortBy == "clicks" {
+		allURLs, err := s.repo.ListURLs(ctx, ListURLsDTO{
+			UserID: userID,
+			Limit:  1000,
+			Offset: 0,
+		})
+		if err != nil {
+			s.logger.Error("Failed to list URLs", zap.Error(err))
+			return nil, 0, err
+		}
+
+		urlIDs := make([]uuid.UUID, len(allURLs))
+		for i, u := range allURLs {
+			urlIDs[i] = u.ID
+		}
+
+		clickCounts, err := s.repo.GetClickCountsByURLIDs(ctx, urlIDs)
+		if err != nil {
+			s.logger.Error("Failed to get click counts", zap.Error(err))
+			clickCounts = make(map[uuid.UUID]int64)
+		}
+
+		sort.Slice(allURLs, func(i, j int) bool {
+			return clickCounts[allURLs[i].ID] > clickCounts[allURLs[j].ID]
+		})
+
+		start := offset
+		if start > int32(len(allURLs)) {
+			start = int32(len(allURLs))
+		}
+		end := start + limit
+		if end > int32(len(allURLs)) {
+			end = int32(len(allURLs))
+		}
+		urls = allURLs[start:end]
+	} else {
+		urls, err = s.repo.ListURLs(ctx, ListURLsDTO{
+			UserID: userID,
+			Limit:  limit,
+			Offset: offset,
+		})
+		if err != nil {
+			s.logger.Error("Failed to list URLs", zap.Error(err))
+			return nil, 0, err
+		}
 	}
 
-	// Get total count
 	count, err := s.repo.GetURLCount(ctx, GetURLCountDTO{UserID: userID})
 	if err != nil {
 		s.logger.Error("Failed to get URL count", zap.Error(err))
@@ -264,6 +302,10 @@ func (s *UrlService) ListURLs(ctx context.Context, userID uuid.UUID, limit, offs
 	}
 
 	return urls, count, nil
+}
+
+func (s *UrlService) GetClickCountsByURLIDs(ctx context.Context, urlIDs []uuid.UUID) (map[uuid.UUID]int64, error) {
+	return s.repo.GetClickCountsByURLIDs(ctx, urlIDs)
 }
 
 // GetURLCount returns the total count of URLs for a user
@@ -307,17 +349,20 @@ func (s *UrlService) ListAllURLs(ctx context.Context, limit, offset int32) ([]db
 }
 
 // TrackClick records a click event for a URL
-func (s *UrlService) TrackClick(ctx context.Context, urlID uuid.UUID, device, browser string, userID *uuid.UUID) error {
+func (s *UrlService) TrackClick(ctx context.Context, urlID uuid.UUID, device, browser string, userID *uuid.UUID, ipAddress, country, city string) error {
 	if s.clickRepo == nil {
 		s.logger.Warn("Click tracking disabled - click repository not initialized")
 		return nil
 	}
 
 	_, err := s.clickRepo.CreateClick(ctx, CreateClickDTO{
-		UrlID:   urlID,
-		UserID:  userID,
-		Device:  device,
-		Browser: browser,
+		UrlID:     urlID,
+		UserID:    userID,
+		Device:    device,
+		Browser:   browser,
+		IPAddress: ipAddress,
+		Country:   country,
+		City:      city,
 	})
 	if err != nil {
 		s.logger.Error("Failed to track click", zap.Error(err), zap.String("url_id", urlID.String()))
@@ -328,6 +373,9 @@ func (s *UrlService) TrackClick(ctx context.Context, urlID uuid.UUID, device, br
 		zap.String("url_id", urlID.String()),
 		zap.String("device", device),
 		zap.String("browser", browser),
+		zap.String("ip", ipAddress),
+		zap.String("country", country),
+		zap.String("city", city),
 	)
 
 	return nil
@@ -354,6 +402,7 @@ type URLAnalytics struct {
 	DailyClicks  []dbgen.GetClickStatsByDateRangeRow `json:"daily_clicks"`
 	DeviceStats  []dbgen.GetDeviceStatsByURLIDRow    `json:"device_stats"`
 	BrowserStats []dbgen.GetBrowserStatsByURLIDRow   `json:"browser_stats"`
+	GeoStats     []dbgen.GetGeoStatsByURLIDRow       `json:"geo_stats"`
 }
 
 // UpdateURLStatus toggles the active status of a URL
@@ -418,10 +467,16 @@ func (s *UrlService) GetURLAnalytics(ctx context.Context, urlID uuid.UUID, userI
 		browserStats = nil
 	}
 
+	geoStats, err := s.clickRepo.GetGeoStatsByURLID(ctx, urlID)
+	if err != nil {
+		geoStats = nil
+	}
+
 	return &URLAnalytics{
 		TotalClicks:  basicStats.TotalClicks,
 		DailyClicks:  dailyClicks,
 		DeviceStats:  deviceStats,
 		BrowserStats: browserStats,
+		GeoStats:     geoStats,
 	}, nil
 }

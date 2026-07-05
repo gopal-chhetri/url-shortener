@@ -18,13 +18,15 @@ type UrlHandler struct {
 	urlService UrlServiceInterface
 	logger     *zap.Logger
 	env        *infra.Env
+	geoService *infra.GeoService
 }
 
-func NewUrlHandler(urlService UrlServiceInterface, logger *zap.Logger, env *infra.Env) *UrlHandler {
+func NewUrlHandler(urlService UrlServiceInterface, logger *zap.Logger, env *infra.Env, geoService *infra.GeoService) *UrlHandler {
 	return &UrlHandler{
 		urlService: urlService,
 		logger:     logger,
 		env:        env,
+		geoService: geoService,
 	}
 }
 
@@ -47,6 +49,7 @@ type URLResponse struct {
 	OriginalURL string `json:"original_url"`
 	UserID      string `json:"user_id,omitempty"`
 	IsActive    bool   `json:"is_active"`
+	ClickCount  int64  `json:"click_count"`
 	CreatedAt   string `json:"created_at"`
 	UpdatedAt   string `json:"updated_at"`
 }
@@ -84,6 +87,7 @@ func toURLResponse(url dbgen.Url) URLResponse {
 		OriginalURL: url.OriginalUrl,
 		UserID:      userID,
 		IsActive:    url.IsActive.Bool,
+		ClickCount:  0,
 		CreatedAt:   url.CreatedAt.Time.String(),
 		UpdatedAt:   url.UpdatedAt.Time.String(),
 	}
@@ -210,13 +214,16 @@ func (h *UrlHandler) RedirectURL(c *gin.Context) {
 		return
 	}
 
-	// Track click asynchronously
+	if !url.IsActive.Bool {
+		h.logger.Warn("Attempt to redirect inactive URL", zap.String("code", code))
+		response.NotFoundResponse(c, "URL not found")
+		return
+	}
+
 	go func() {
-		// Parse user agent
 		userAgent := c.GetHeader("User-Agent")
 		deviceInfo := utils.ParseUserAgent(userAgent)
 
-		// Get user ID if authenticated (optional)
 		var userID *uuid.UUID
 		if userIDStr := c.GetString("user_id"); userIDStr != "" {
 			if id, err := uuid.Parse(userIDStr); err == nil {
@@ -224,8 +231,19 @@ func (h *UrlHandler) RedirectURL(c *gin.Context) {
 			}
 		}
 
-		// Track click using context.WithoutCancel to prevent cancellation when the HTTP request finishes
-		if err := h.urlService.TrackClick(context.WithoutCancel(c.Request.Context()), url.ID, deviceInfo.Device, deviceInfo.Browser, userID); err != nil {
+		clientIP := c.ClientIP()
+		var ipAddress, country, city string
+
+		if h.geoService != nil {
+			geoInfo, err := h.geoService.LookupIP(clientIP)
+			if err == nil {
+				ipAddress = clientIP
+				country = geoInfo.Country
+				city = geoInfo.City
+			}
+		}
+
+		if err := h.urlService.TrackClick(context.WithoutCancel(c.Request.Context()), url.ID, deviceInfo.Device, deviceInfo.Browser, userID, ipAddress, country, city); err != nil {
 			h.logger.Error("Failed to track click", zap.Error(err))
 		}
 	}()
@@ -249,6 +267,7 @@ func (h *UrlHandler) RedirectURL(c *gin.Context) {
 // @Security BearerAuth
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Number of items per page" default(10)
+// @Param sort query string false "Sort by: date, clicks" default(date)
 // @Success 200 {object} response.PaginatedResponse{data=[]URLResponse}
 // @Failure 400 {object} response.Response
 // @Failure 401 {object} response.Response
@@ -269,9 +288,9 @@ func (h *UrlHandler) ListURLs(c *gin.Context) {
 		return
 	}
 
-	// Parse pagination parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	sortBy := c.DefaultQuery("sort", "date")
 	if page < 1 {
 		page = 1
 	}
@@ -284,19 +303,29 @@ func (h *UrlHandler) ListURLs(c *gin.Context) {
 
 	offset := int32((page - 1) * limit)
 
-	// Get URLs
-	urls, count, err := h.urlService.ListURLs(c.Request.Context(), userID, int32(limit), offset)
+	urls, count, err := h.urlService.ListURLs(c.Request.Context(), userID, int32(limit), offset, sortBy)
 	if err != nil {
 		infra.LogError(h.logger, "Failed to list URLs", err)
 		response.ErrorResponse(c, err)
 		return
 	}
 
-	// Convert to response format
+	urlIDs := make([]uuid.UUID, len(urls))
+	for i, u := range urls {
+		urlIDs[i] = u.ID
+	}
+
+	clickCounts, err := h.urlService.GetClickCountsByURLIDs(c.Request.Context(), urlIDs)
+	if err != nil {
+		infra.LogError(h.logger, "Failed to fetch click counts", err)
+		clickCounts = make(map[uuid.UUID]int64)
+	}
+
 	urlResponses := make([]URLResponse, len(urls))
 	for i, url := range urls {
 		urlResponses[i] = toURLResponse(url)
 		urlResponses[i].ShortURL = h.buildFullShortURL(url.ShortUrl)
+		urlResponses[i].ClickCount = clickCounts[url.ID]
 	}
 
 	// Build pagination metadata

@@ -93,6 +93,8 @@ type UrlRepositoryInterface interface {
 	CountAllURLs(ctx context.Context, dto CountAllURLsDTO) (int64, error)
 	ListAllURLsByDate(ctx context.Context, dto ListAllURLsByDateDTO) ([]dbgen.Url, error)
 	CountAllURLsByDate(ctx context.Context, dto CountAllURLsByDateDTO) (int64, error)
+	ListURLsByClicks(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]dbgen.Url, error)
+	GetClickCountsByURLIDs(ctx context.Context, urlIDs []uuid.UUID) (map[uuid.UUID]int64, error)
 	GetPool() *pgxpool.Pool
 }
 
@@ -223,8 +225,47 @@ func (r *UrlRepository) ListAllURLsByDate(ctx context.Context, dto ListAllURLsBy
 
 func (r *UrlRepository) CountAllURLsByDate(ctx context.Context, dto CountAllURLsByDateDTO) (int64, error) {
 	querier := r.getQuerier(dto.Tx)
-	// Parse dates to pgtype.Timestamptz
-	// For simplicity, using string representation - you may want to parse these properly
 	count, err := querier.CountAllURLsByDate(ctx, dbgen.CountAllURLsByDateParams{})
 	return count, translateError(err, "url")
+}
+
+func (r *UrlRepository) ListURLsByClicks(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]dbgen.Url, error) {
+	clickRows, err := r.queries.ListURLsByClicks(ctx, dbgen.ListURLsByClicksParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	urls := make([]dbgen.Url, len(clickRows))
+	for i, row := range clickRows {
+		urls[i] = dbgen.Url{
+			ID:          row.ID,
+			ShortUrl:    row.ShortUrl,
+			OriginalUrl: row.OriginalUrl,
+			UserID:      row.UserID,
+			IsActive:    row.IsActive,
+			CreatedAt:   row.CreatedAt,
+			UpdatedAt:   row.UpdatedAt,
+		}
+	}
+	return urls, nil
+}
+
+func (r *UrlRepository) GetClickCountsByURLIDs(ctx context.Context, urlIDs []uuid.UUID) (map[uuid.UUID]int64, error) {
+	if len(urlIDs) == 0 {
+		return map[uuid.UUID]int64{}, nil
+	}
+
+	rows, err := r.queries.GetClickCountsByURLIDs(ctx, urlIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	counts := make(map[uuid.UUID]int64, len(rows))
+	for _, row := range rows {
+		counts[uuid.UUID(row.UrlID.Bytes)] = row.ClickCount
+	}
+	return counts, nil
 }

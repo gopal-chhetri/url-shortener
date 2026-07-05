@@ -19,6 +19,9 @@ type Click struct {
 	Longitude pgtype.Numeric
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
+	IpAddress pgtype.Text
+	Country   pgtype.Text
+	City      pgtype.Text
 }
 
 type Role struct {

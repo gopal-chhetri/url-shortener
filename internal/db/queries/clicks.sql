@@ -1,6 +1,6 @@
 -- name: CreateClick :one
-INSERT INTO clicks (user_id, url_id, device, browser, latitude, longitude)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO clicks (user_id, url_id, device, browser, latitude, longitude, ip_address, country, city)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING *;
 
 -- name: GetClickByID :one
@@ -63,3 +63,12 @@ SELECT url_id, COUNT(*)::bigint AS click_count
 FROM clicks
 WHERE url_id = ANY($1::uuid[])
 GROUP BY url_id;
+
+-- name: GetGeoStatsByURLID :many
+SELECT 
+    COALESCE(country, 'Unknown') AS country,
+    COUNT(*) AS count
+FROM clicks
+WHERE url_id = $1
+GROUP BY country
+ORDER BY count DESC;

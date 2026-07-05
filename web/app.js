@@ -11,10 +11,11 @@ const state = {
   user:  JSON.parse(localStorage.getItem('su_user') || 'null'),
   currentView: 'dashboard',
   urlFilter: 'active',
+  userUrlSort: 'date',
   adminUrlFilter: 'active',
   adminUrlSearch: '',
   adminUrlSort: 'date',
-  adminUrlUserId: null, // Filter by specific user ID
+  adminUrlUserId: null,
   charts: {},
 };
 
@@ -269,7 +270,7 @@ async function loadDashboard() {
     
     // 2. Animate basic counts (in a real app, you'd fetch user stats directly)
     animateCount($('stat-my-urls'), res.metadata?.total || urls.length);
-    animateCount($('stat-clicks'),  urls.reduce((acc, u) => acc + (u.clicks||0), 0)); 
+    animateCount($('stat-clicks'),  urls.reduce((acc, u) => acc + (u.click_count||0), 0));
     animateCount($('stat-active'),  urls.filter(u => u.is_active !== false).length);
 
     renderRecentUrls(urls);
@@ -295,13 +296,14 @@ function animateCount(el, target) {
 function renderRecentUrls(urls) {
   const tbody = $('tbody-recent-urls');
   if (!urls.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="table-empty">No routes deployed yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="table-empty">No routes deployed yet.</td></tr>';
     return;
   }
   tbody.innerHTML = urls.map(u => `
     <tr>
       <td><a href="${u.short_url}" target="_blank" class="short-link data-font">${u.short_url.split('/').pop()}</a></td>
       <td class="url-orig-cell" title="${u.original_url}">${u.original_url}</td>
+      <td class="data-font text-data">${fmt(u.click_count || 0)}</td>
       <td>
         <span class="status-badge ${u.is_active !== false ? 'active' : 'inactive'}">
           <span class="status-dot"></span>${u.is_active !== false ? 'Live' : 'Offline'}
@@ -370,7 +372,7 @@ $('btn-view-all-urls').addEventListener('click', () => switchView('my-urls'));
 /* ─────────────────────────────────────────
    ANALYTICS PANEL
 ──────────────────────────────────────── */
-let dailyChart = null, deviceChart = null, browserChart = null;
+let dailyChart = null, deviceChart = null, browserChart = null, geoChart = null;
 
 async function showAnalytics(id, shortUrl) {
   const panel = $('analytics-panel');
@@ -382,7 +384,6 @@ async function showAnalytics(id, shortUrl) {
     const res = await apiFetch(`/urls/${id}/analytics`);
     const d = res.data;
     
-    // Transform API response to Chart.js format
     const dailyData = {
       labels: d.daily_clicks ? d.daily_clicks.map(x => x.date.split('T')[0]) : ['No Data'],
       data: d.daily_clicks ? d.daily_clicks.map(x => x.clicks) : [0]
@@ -398,9 +399,15 @@ async function showAnalytics(id, shortUrl) {
       data: d.browser_stats ? d.browser_stats.map(x => x.clicks) : [0]
     };
 
+    const geoData = {
+      labels: d.geo_stats ? d.geo_stats.map(x => x.country || 'Unknown') : ['No Data'],
+      data: d.geo_stats ? d.geo_stats.map(x => x.count) : [0]
+    };
+
     renderLineChart(dailyData);
     renderDonutChart('chart-device',  deviceData);
     renderDonutChart('chart-browser', browserData);
+    renderDonutChart('chart-geo', geoData);
   } catch (err) {
     showToast('Failed to load analytics: ' + err.message, 'error');
   }
@@ -507,17 +514,16 @@ function chartDefaults({ legend }) {
 ──────────────────────────────────────── */
 async function loadMyUrls(page = 1) {
   try {
-    const res = await apiFetch(`/urls?page=${page}&limit=10`);
+    const res = await apiFetch(`/urls?page=${page}&limit=10&sort=${state.userUrlSort}`);
     let urls = res.data || [];
     
-    // Filter URLs based on selected tab
     if (state.urlFilter === 'active') {
       urls = urls.filter(u => u.is_active !== false);
     }
     
     const tbody = $('tbody-all-urls');
     if (!urls.length) {
-      tbody.innerHTML = `<tr><td colspan="5" class="table-empty">${state.urlFilter === 'active' ? 'No active routes.' : 'No routes found.'}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="table-empty">${state.urlFilter === 'active' ? 'No active routes.' : 'No routes found.'}</td></tr>`;
       $('pagination-urls').innerHTML = '';
       return;
     }
@@ -527,6 +533,7 @@ async function loadMyUrls(page = 1) {
         <td><a href="${u.short_url}" target="_blank" class="short-link data-font">${u.short_url.split('/').pop()}</a></td>
         <td class="url-orig-cell" title="${u.original_url}">${u.original_url}</td>
         <td class="data-font text-nebula">${new Date(u.created_at).toLocaleDateString()}</td>
+        <td class="data-font text-data">${fmt(u.click_count || 0)}</td>
         <td>
           <span class="status-badge ${u.is_active !== false ? 'active' : 'inactive'}">
             <span class="status-dot"></span>${u.is_active !== false ? 'Live' : 'Offline'}
@@ -849,6 +856,18 @@ document.querySelectorAll('[data-admin-tab]').forEach(btn => {
     state.adminUrlFilter = btn.dataset.adminTab;
     loadAdminLinks(1);
   });
+});
+
+// User URL sort
+$('user-url-sort').addEventListener('change', () => {
+  state.userUrlSort = $('user-url-sort').value;
+  loadMyUrls(1);
+});
+
+// Admin URL sort
+$('admin-url-sort').addEventListener('change', () => {
+  state.adminUrlSort = $('admin-url-sort').value;
+  loadAdminLinks(1);
 });
 
 // Admin search

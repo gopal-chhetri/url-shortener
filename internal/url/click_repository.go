@@ -15,6 +15,9 @@ type CreateClickDTO struct {
 	UrlID     uuid.UUID
 	Device    string
 	Browser   string
+	IPAddress string
+	Country   string
+	City      string
 	Latitude  float64
 	Longitude float64
 	Tx        pgx.Tx
@@ -43,6 +46,7 @@ type ClickRepositoryInterface interface {
 	GetClickStatsByURLID(ctx context.Context, urlID uuid.UUID) (dbgen.GetClickStatsByURLIDRow, error)
 	GetDeviceStatsByURLID(ctx context.Context, urlID uuid.UUID) ([]dbgen.GetDeviceStatsByURLIDRow, error)
 	GetBrowserStatsByURLID(ctx context.Context, urlID uuid.UUID) ([]dbgen.GetBrowserStatsByURLIDRow, error)
+	GetGeoStatsByURLID(ctx context.Context, urlID uuid.UUID) ([]dbgen.GetGeoStatsByURLIDRow, error)
 	GetClicksByDateRange(ctx context.Context, urlID uuid.UUID, start, end string) ([]dbgen.GetClickStatsByDateRangeRow, error)
 }
 
@@ -74,20 +78,36 @@ func (r *ClickRepository) CreateClick(ctx context.Context, dto CreateClickDTO) (
 	}
 
 	var latitude, longitude pgtype.Numeric
-	if dto.Latitude != 0 {
-		latitude = pgtype.Numeric{Int: nil, Valid: true}
-		// Note: You might need to properly convert float64 to pgtype.Numeric
-		// For simplicity, we're leaving it as is
+	latitude.Valid = false
+	longitude.Valid = false
+
+	var ipAddress, country, city pgtype.Text
+	if dto.IPAddress != "" {
+		ipAddress = pgtype.Text{String: dto.IPAddress, Valid: true}
 	}
-	if dto.Longitude != 0 {
-		longitude = pgtype.Numeric{Int: nil, Valid: true}
+	if dto.Country != "" {
+		country = pgtype.Text{String: dto.Country, Valid: true}
+	}
+	if dto.City != "" {
+		city = pgtype.Text{String: dto.City, Valid: true}
+	}
+
+	var device, browser pgtype.Text
+	if dto.Device != "" {
+		device = pgtype.Text{String: dto.Device, Valid: true}
+	}
+	if dto.Browser != "" {
+		browser = pgtype.Text{String: dto.Browser, Valid: true}
 	}
 
 	click, err := querier.CreateClick(ctx, dbgen.CreateClickParams{
 		UserID:    userID,
 		UrlID:     pgtype.UUID{Bytes: dto.UrlID, Valid: true},
-		Device:    pgtype.Text{String: dto.Device, Valid: true},
-		Browser:   pgtype.Text{String: dto.Browser, Valid: true},
+		Device:    device,
+		Browser:   browser,
+		IpAddress: ipAddress,
+		Country:   country,
+		City:      city,
 		Latitude:  latitude,
 		Longitude: longitude,
 	})
@@ -142,6 +162,12 @@ func (r *ClickRepository) GetDeviceStatsByURLID(ctx context.Context, urlID uuid.
 func (r *ClickRepository) GetBrowserStatsByURLID(ctx context.Context, urlID uuid.UUID) ([]dbgen.GetBrowserStatsByURLIDRow, error) {
 	querier := r.getQuerier(nil)
 	stats, err := querier.GetBrowserStatsByURLID(ctx, pgtype.UUID{Bytes: urlID, Valid: true})
+	return stats, translateError(err, "click")
+}
+
+func (r *ClickRepository) GetGeoStatsByURLID(ctx context.Context, urlID uuid.UUID) ([]dbgen.GetGeoStatsByURLIDRow, error) {
+	querier := r.getQuerier(nil)
+	stats, err := querier.GetGeoStatsByURLID(ctx, pgtype.UUID{Bytes: urlID, Valid: true})
 	return stats, translateError(err, "click")
 }
 

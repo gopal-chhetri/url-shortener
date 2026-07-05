@@ -198,12 +198,13 @@
               <tr>
                 <th>Endpoint</th>
                 <th>Target</th>
+                <th>Clicks</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="tbody-recent-urls">
-              <tr><td colspan="4" class="table-empty">Initializing data...</td></tr>
+              <tr><td colspan="5" class="table-empty">Initializing data...</td></tr>
             </tbody>
           </table>
         </div>
@@ -229,6 +230,10 @@
               <h4>Browser Telemetry</h4>
               <canvas id="chart-browser" height="200"></canvas>
             </div>
+            <div class="chart-card glass-panel">
+              <h4>Geographic Distribution</h4>
+              <canvas id="chart-geo" height="200"></canvas>
+            </div>
           </div>
         </div>
       </div>
@@ -244,6 +249,12 @@
         <button class="tab-btn active" data-tab="active" id="tab-active">Active Links</button>
         <button class="tab-btn" data-tab="all" id="tab-all">All Links</button>
       </div>
+      <div class="search-sort-bar" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+        <select id="user-url-sort" class="btn btn-ghost btn-sm" style="flex: 1;">
+          <option value="date">Sort by Date</option>
+          <option value="clicks">Sort by Clicks</option>
+        </select>
+      </div>
       <div class="card glass-panel">
         <div class="table-wrapper">
           <table class="data-table">
@@ -252,12 +263,13 @@
                 <th>Endpoint</th>
                 <th>Target Path</th>
                 <th>Deployed</th>
+                <th>Clicks</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="tbody-all-urls">
-              <tr><td colspan="5" class="table-empty">Initializing data...</td></tr>
+              <tr><td colspan="6" class="table-empty">Initializing data...</td></tr>
             </tbody>
           </table>
         </div>

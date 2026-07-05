@@ -733,6 +733,13 @@ const docTemplate = `{
                         "description": "Number of items per page",
                         "name": "limit",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "date",
+                        "description": "Sort by: date, clicks",
+                        "name": "sort",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1445,6 +1452,9 @@ const docTemplate = `{
         "internal_url.URLResponse": {
             "type": "object",
             "properties": {
+                "click_count": {
+                    "type": "integer"
+                },
                 "created_at": {
                     "type": "string"
                 },

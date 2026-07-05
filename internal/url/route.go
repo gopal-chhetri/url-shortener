@@ -14,7 +14,7 @@ func SetupUrlRoute(app *bootstrap.Application, router *gin.Engine, protectedGrou
 
 	// Initialize service with click tracking
 	urlService := NewUrlServiceWithClicks(urlRepository, clickRepository, app.Redis, app.Env, app.Logger)
-	urlHandler := NewUrlHandler(urlService, app.Logger, app.Env)
+	urlHandler := NewUrlHandler(urlService, app.Logger, app.Env, app.GeoService)
 
 	// Public routes (no authentication required)
 	// Redirect endpoint - accessible by anyone (registered directly on router)
