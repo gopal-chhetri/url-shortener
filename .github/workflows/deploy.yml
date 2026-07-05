@@ -89,6 +89,16 @@ jobs:
           env-slug: "prod"
           secret-path: "/"
 
+      - name: Ensure deploy directory permissions
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ env.VPS_HOST }}
+          username: ${{ env.VPS_SSH_USER }}
+          key: ${{ env.VPS_SSH_KEY }}
+          script: |
+            sudo mkdir -p /opt/app/url-shortener/deployments/production
+            sudo chown -R "$(whoami):$(whoami)" /opt/app/url-shortener
+
       - name: Sync deploy script
         uses: appleboy/scp-action@v0.1.7
         with:

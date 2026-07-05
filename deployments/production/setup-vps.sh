@@ -9,8 +9,10 @@ set -e
 
 VPS=${1:?Usage: setup-vps.sh <vps-ip> <ssh-user>}
 USER=${2:?Usage: setup-vps.sh <vps-ip> <ssh-user>}
-REMOTE_DIR="/opt/app/url-shortener/deployments/production"
+APP_DIR="/opt/app/url-shortener"
+REMOTE_DIR="$APP_DIR/deployments/production"
 DEPLOY_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$DEPLOY_DIR/../.." && pwd)"
 
 echo ">>> Setting up VPS: $USER@$VPS"
 
@@ -27,13 +29,13 @@ fi
 # ── Create deployment directory ──
 echo ""
 echo ">>> Creating deployment directory..."
-ssh "$USER@$VPS" "sudo mkdir -p $REMOTE_DIR && sudo chown $USER:$USER $REMOTE_DIR"
+ssh "$USER@$VPS" "sudo mkdir -p $REMOTE_DIR && sudo chown -R $USER:$USER $APP_DIR"
 
 # ── Copy deployment files ──
 echo ""
 echo ">>> Copying deployment files..."
 scp "$DEPLOY_DIR/compose.yml" "$DEPLOY_DIR/deploy.sh" "$USER@$VPS:$REMOTE_DIR/"
-scp -r "$DEPLOY_DIR/migrations" "$USER@$VPS:$REMOTE_DIR/"
+scp -r "$REPO_ROOT/migrations" "$USER@$VPS:$APP_DIR/"
 
 # ── Ensure traefik-network exists ──
 echo ""
