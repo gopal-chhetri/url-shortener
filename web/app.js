@@ -89,6 +89,7 @@ function updateNavbar() {
   if (!signIn || !cta) return;
 
   if (state.token && state.user) {
+    // Logged in: hide Sign In, change CTA to Dashboard
     signIn.classList.add('hidden');
     cta.textContent = 'Dashboard';
     cta.href = '#';
@@ -96,9 +97,13 @@ function updateNavbar() {
       e.preventDefault();
       if (!$('view-app').classList.contains('hidden')) {
         switchView('dashboard');
+      } else {
+        // If on login screen, enter app
+        enterApp(state.user, state.token);
       }
     };
   } else {
+    // Logged out: show Sign In, change CTA to Start Building
     signIn.classList.remove('hidden');
     cta.textContent = 'Start Building';
     cta.href = '/app/index.html';
@@ -302,9 +307,9 @@ function renderRecentUrls(urls) {
   tbody.innerHTML = urls.map(u => `
     <tr>
       <td><a href="${u.short_url}" target="_blank" class="short-link data-font">${u.short_url.split('/').pop()}</a></td>
-      <td class="url-orig-cell" title="${u.original_url}">${u.original_url}</td>
+      <td class="url-orig-cell hide-mobile" title="${u.original_url}">${u.original_url}</td>
       <td class="data-font text-data">${fmt(u.click_count || 0)}</td>
-      <td>
+      <td class="hide-mobile">
         <span class="status-badge ${u.is_active !== false ? 'active' : 'inactive'}">
           <span class="status-dot"></span>${u.is_active !== false ? 'Live' : 'Offline'}
         </span>
@@ -474,6 +479,7 @@ function renderDonutChart(canvasId, data) {
 function chartDefaults({ legend }) {
   return {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         display: !!legend,
@@ -531,10 +537,10 @@ async function loadMyUrls(page = 1) {
     tbody.innerHTML = urls.map(u => `
       <tr>
         <td><a href="${u.short_url}" target="_blank" class="short-link data-font">${u.short_url.split('/').pop()}</a></td>
-        <td class="url-orig-cell" title="${u.original_url}">${u.original_url}</td>
-        <td class="data-font text-nebula">${new Date(u.created_at).toLocaleDateString()}</td>
+        <td class="url-orig-cell hide-mobile" title="${u.original_url}">${u.original_url}</td>
+        <td class="data-font text-nebula hide-tablet">${new Date(u.created_at).toLocaleDateString()}</td>
         <td class="data-font text-data">${fmt(u.click_count || 0)}</td>
-        <td>
+        <td class="hide-mobile">
           <span class="status-badge ${u.is_active !== false ? 'active' : 'inactive'}">
             <span class="status-dot"></span>${u.is_active !== false ? 'Live' : 'Offline'}
           </span>
@@ -590,9 +596,9 @@ async function loadAdminUsers(page = 1) {
             <span class="data-font">${u.first_name} ${u.last_name||''}</span>
           </div>
         </td>
-        <td class="text-nebula">${u.email}</td>
+        <td class="text-nebula hide-mobile">${u.email}</td>
         <td><span class="role-badge ${u.role}">${u.role}</span></td>
-        <td>
+        <td class="hide-tablet">
           <span class="status-badge ${u.is_active ? 'active' : 'inactive'}">
             <span class="status-dot"></span>${u.is_active ? 'Active' : 'Suspended'}
           </span>
@@ -670,9 +676,9 @@ async function loadAdminLinks(page = 1) {
       return `
       <tr>
         <td><a href="${u.short_url}" target="_blank" class="short-link data-font">${u.short_url.split('/').pop()}</a></td>
-        <td class="url-orig-cell" title="${u.original_url}">${u.original_url}</td>
-        <td class="data-font text-nebula">${ownerDisplay}</td>
-        <td>
+        <td class="url-orig-cell hide-mobile" title="${u.original_url}">${u.original_url}</td>
+        <td class="data-font text-nebula hide-tablet">${ownerDisplay}</td>
+        <td class="hide-mobile">
           <span class="status-badge ${u.is_active !== false ? 'active' : 'inactive'}">
             <span class="status-dot"></span>${u.is_active !== false ? 'Live' : 'Offline'}
           </span>
@@ -893,11 +899,55 @@ if (adminSortSelect) {
 }
 
 /* ─────────────────────────────────────────
+   MOBILE MENU TOGGLE
+──────────────────────────────────────── */
+const mobileMenuToggle = $('mobile-menu-toggle');
+const sidebar = $('sidebar');
+const sidebarOverlay = $('sidebar-overlay');
+
+if (mobileMenuToggle && sidebar && sidebarOverlay) {
+  mobileMenuToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+    sidebarOverlay.classList.toggle('active');
+  });
+
+  sidebarOverlay.addEventListener('click', () => {
+    sidebar.classList.remove('open');
+    sidebarOverlay.classList.remove('active');
+  });
+
+  // Close sidebar when clicking a nav item on mobile
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      if (window.innerWidth < 768) {
+        sidebar.classList.remove('open');
+        sidebarOverlay.classList.remove('active');
+      }
+    });
+  });
+}
+
+/* ─────────────────────────────────────────
    BOOT
 ──────────────────────────────────────── */
 (function init() {
   refreshIcons();
   updateNavbar();
+  
+  // Handle hash fragments for login/register
+  const hash = window.location.hash;
+  if (hash === '#register') {
+    $('form-login').classList.remove('active');
+    $('form-login').classList.add('hidden');
+    $('form-register').classList.remove('hidden');
+    $('form-register').classList.add('active');
+  } else if (hash === '#login') {
+    $('form-register').classList.remove('active');
+    $('form-register').classList.add('hidden');
+    $('form-login').classList.remove('hidden');
+    $('form-login').classList.add('active');
+  }
+  
   if (state.token && state.user) {
     enterApp(state.user, state.token);
   } else {

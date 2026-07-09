@@ -87,11 +87,19 @@
   </div>
 </div>
 
+<!-- Mobile menu toggle (outside app shell so z-index works against top nav) -->
+<button class="mobile-menu-toggle" id="mobile-menu-toggle">
+  <i data-lucide="menu"></i>
+</button>
+
 <!-- ─── APP SHELL ──────────────────────────────────────────────────────────── -->
 <div id="view-app" class="app hidden">
   
+  <!-- Sidebar overlay for mobile -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  
   <!-- Sidebar -->
-  <aside class="sidebar glass-panel-no-radius">
+  <aside class="sidebar glass-panel-no-radius" id="sidebar">
     <div class="sidebar-header">
       <i data-lucide="zap" class="logo-icon text-pulse"></i>
       <span class="sidebar-title">ShortURL</span>
@@ -197,9 +205,9 @@
             <thead>
               <tr>
                 <th>Endpoint</th>
-                <th>Target</th>
+                <th class="hide-mobile">Target</th>
                 <th>Clicks</th>
-                <th>Status</th>
+                <th class="hide-mobile">Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -261,10 +269,10 @@
             <thead>
               <tr>
                 <th>Endpoint</th>
-                <th>Target Path</th>
-                <th>Deployed</th>
+                <th class="hide-mobile">Target Path</th>
+                <th class="hide-tablet">Deployed</th>
                 <th>Clicks</th>
-                <th>Status</th>
+                <th class="hide-mobile">Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -324,7 +332,7 @@
         <div class="table-wrapper">
           <table class="data-table">
             <thead>
-              <tr><th>Identity</th><th>Email</th><th>Access Level</th><th>State</th><th>Actions</th></tr>
+              <tr><th>Identity</th><th class="hide-mobile">Email</th><th>Access Level</th><th class="hide-tablet">State</th><th>Actions</th></tr>
             </thead>
             <tbody id="tbody-admin-users">
               <tr><td colspan="5" class="table-empty">Initializing data...</td></tr>
@@ -365,7 +373,7 @@
         <div class="table-wrapper">
           <table class="data-table">
             <thead>
-              <tr><th>Endpoint</th><th>Target</th><th>Owner</th><th>Status</th><th>Clicks</th><th>Actions</th></tr>
+              <tr><th>Endpoint</th><th class="hide-mobile">Target</th><th class="hide-tablet">Owner</th><th class="hide-mobile">Status</th><th>Clicks</th><th>Actions</th></tr>
             </thead>
             <tbody id="tbody-admin-urls">
               <tr><td colspan="6" class="table-empty">Initializing data...</td></tr>
@@ -384,6 +392,10 @@
 
 <script src="/app/app.js"></script>
 <script>
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+
   fetch('/api/v1/config').then(r => r.json()).then(cfg => {
     if (cfg.base_url) {
       document.querySelectorAll('[data-docs-link]').forEach(a => {
