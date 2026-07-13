@@ -1,3 +1,5 @@
+name: url_shortener
+
 services:
   app:
     container_name: url_shortener_app
