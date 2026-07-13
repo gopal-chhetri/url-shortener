@@ -10,9 +10,9 @@ set -e
 IMAGE_TAG=${1:?Usage: deploy.sh <image-tag>}
 COMPOSE_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_SERVICE="app"
-HEALTH_URL="http://localhost:7500/health"
-HEALTH_RETRIES=10
-HEALTH_INTERVAL=3
+HEALTH_URL="http://localhost:7500/healthz"
+HEALTH_RETRIES=20
+HEALTH_INTERVAL=5
 
 cd "$COMPOSE_DIR"
 
@@ -118,6 +118,10 @@ done
 if [ $RETRIES -eq 0 ]; then
     echo ""
     echo "!!! Health check failed!"
+    echo ""
+    echo ">>> Showing last 50 lines of application logs:"
+    docker compose logs --tail=50 $APP_SERVICE
+    echo ""
     echo ">>> Rolling back to ${CURRENT_TAG}..."
 
     if [ "$CURRENT_TAG" = "none" ]; then

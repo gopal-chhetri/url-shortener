@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -20,8 +21,15 @@ func NewDb(env *Env) *pgxpool.Pool {
 
 	config, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
+		log.Printf("Failed to parse database config: %v", err)
 		return nil
 	}
+
+	// Configure connection pool
+	config.MaxConns = 25
+	config.MinConns = 5
+	config.MaxConnLifetime = 5 * time.Minute
+	config.MaxConnIdleTime = 30 * time.Second
 
 	// Configure logging
 	config.ConnConfig.Tracer = &tracelog.TraceLog{
@@ -29,11 +37,33 @@ func NewDb(env *Env) *pgxpool.Pool {
 		LogLevel: tracelog.LogLevelDebug, // or LogLevelInfo
 	}
 
-	pool, err := pgxpool.NewWithConfig(context.Background(), config)
-	if err != nil {
-		log.Panic(err)
+	// Retry connection with exponential backoff
+	var pool *pgxpool.Pool
+	maxRetries := 5
+	for i := 0; i < maxRetries; i++ {
+		pool, err = pgxpool.NewWithConfig(context.Background(), config)
+		if err == nil {
+			// Verify connection
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			err = pool.Ping(ctx)
+			cancel()
+			if err == nil {
+				log.Printf("Database connection established successfully")
+				return pool
+			}
+			pool.Close()
+		}
+		
+		if i < maxRetries-1 {
+			waitTime := time.Duration(1<<uint(i)) * time.Second // 1s, 2s, 4s, 8s, 16s
+			log.Printf("Failed to connect to database (attempt %d/%d): %v. Retrying in %v...", i+1, maxRetries, err, waitTime)
+			time.Sleep(waitTime)
+		}
 	}
-	return pool
+	
+	log.Printf("Failed to connect to database after %d attempts: %v", maxRetries, err)
+	log.Panic(err)
+	return nil
 }
 
 type pgxLogger struct{}

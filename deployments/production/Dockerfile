@@ -49,7 +49,7 @@ COPY --from=builder /app/web ./web
 
 EXPOSE 7500
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget -qO- http://localhost:7500/health || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+    CMD wget -qO- http://localhost:7500/healthz || exit 1
 
 CMD ["./server"]

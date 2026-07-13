@@ -66,3 +66,11 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 		},
 	})
 }
+
+// LivenessCheck is a simple liveness probe that always returns 200
+// Use this for container health checks to verify the app is running
+func (h *HealthHandler) LivenessCheck(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status": "alive",
+	})
+}

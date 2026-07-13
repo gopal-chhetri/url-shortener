@@ -20,6 +20,7 @@ func SetupRoute(app *bootstrap.Application, r *gin.Engine) {
 	// Register health check (bypasses rate limiter)
 	healthHandler := health.NewHealthHandler(app.Database, app.Redis)
 	r.GET("/health", healthHandler.HealthCheck)
+	r.GET("/healthz", healthHandler.LivenessCheck) // Simple liveness probe
 
 	// Apply CORS middleware :must run before rate limiter and auth
 	r.Use(middleware.CORSMiddleware())
