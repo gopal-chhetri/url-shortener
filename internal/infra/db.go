@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/url"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -17,7 +18,13 @@ func NewDb(env *Env) *pgxpool.Pool {
 	dbName := env.DBName
 	dbHost := env.DBHost
 	dbPort := env.DBPort
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", dbUser, dbPass, dbHost, dbPort, dbName)
+	dsn := (&url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword(dbUser, dbPass),
+		Host:     fmt.Sprintf("%s:%s", dbHost, dbPort),
+		Path:     dbName,
+		RawQuery: "sslmode=disable",
+	}).String()
 
 	config, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
