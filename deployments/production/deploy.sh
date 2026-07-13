@@ -3,8 +3,8 @@ set -e
 
 # ============================================================
 # ShortURL: Production Deploy Script
-# Usage: ./deploy.sh <image-tag>
-# Requires: INFISICAL_CLIENT_ID, INFISICAL_CLIENT_SECRET env vars
+# Usage: infisical run --env=prod -- ./deploy.sh <image-tag>
+# Note: Should be run INSIDE infisical run (secrets already in env)
 # ============================================================
 
 IMAGE_TAG=${1:?Usage: deploy.sh <image-tag>}
@@ -16,34 +16,15 @@ HEALTH_INTERVAL=5
 
 cd "$COMPOSE_DIR"
 
-# ── Authenticate with Infisical ──
-echo ">>> Authenticating with Infisical..."
-
-if [ -z "$INFISICAL_CLIENT_ID" ] || [ -z "$INFISICAL_CLIENT_SECRET" ] || [ -z "$INFISICAL_PROJECT_ID" ]; then
-    echo "!!! ERROR: Required environment variables not set:"
-    echo "    - INFISICAL_CLIENT_ID"
-    echo "    - INFISICAL_CLIENT_SECRET"
-    echo "    - INFISICAL_PROJECT_ID"
-    echo ""
-    echo "    Set these before running deploy.sh:"
-    echo "      export INFISICAL_CLIENT_ID='<your-client-id>'"
-    echo "      export INFISICAL_CLIENT_SECRET='<your-client-secret>'"
-    echo "      export INFISICAL_PROJECT_ID='<your-project-id>'"
+# ── Validate required secrets are present ──
+echo ">>> Validating environment variables..."
+if [ -z "$DB_PASS" ] || [ -z "$DB_USER" ] || [ -z "$DB_NAME" ]; then
+    echo "!!! ERROR: Required database secrets not found in environment"
+    echo "    Make sure this script is run inside: infisical run --env=prod --"
     exit 1
 fi
 
-export INFISICAL_TOKEN=$(infisical login \
-    --method=universal-auth \
-    --client-id="$INFISICAL_CLIENT_ID" \
-    --client-secret="$INFISICAL_CLIENT_SECRET" \
-    --silent --plain)
-
-if [ -z "$INFISICAL_TOKEN" ]; then
-    echo "!!! ERROR: Failed to authenticate with Infisical"
-    exit 1
-fi
-
-echo "    Authenticated successfully."
+echo "    ✓ Database secrets present"
 
 # ── Save current image for rollback ──
 CURRENT_IMAGE=$(docker compose ps -q $APP_SERVICE 2>/dev/null | xargs docker inspect --format='{{.Config.Image}}' 2>/dev/null || echo "")
@@ -57,53 +38,35 @@ fi
 
 echo "Deploying: ghcr.io/gopal-chhetri/url-shortener:${IMAGE_TAG}"
 
-# ── Validate required environment variables ──
-echo ""
-echo ">>> Validating environment variables..."
-if [ -z "$INFISICAL_PROJECT_ID" ]; then
-    echo "!!! ERROR: INFISICAL_PROJECT_ID not set"
-    exit 1
-fi
-
 # ── Log in to GHCR ──
 echo ""
 echo ">>> Authenticating Docker with GitHub Container Registry..."
-infisical run \
-    --projectId="$INFISICAL_PROJECT_ID" \
-    --env="prod" \
-    -- sh -c 'echo "$REGISTRY_PASSWORD" | docker login ghcr.io -u "$REGISTRY_USERNAME" --password-stdin'
+echo "$REGISTRY_PASSWORD" | docker login ghcr.io -u "$REGISTRY_USERNAME" --password-stdin
 
-# ── Pull new image (with secrets injected) ──
+# ── Pull new image ──
 echo ""
 echo ">>> Pulling image..."
-infisical run \
-    --projectId="$INFISICAL_PROJECT_ID" \
-    --env="prod" \
-    -- docker compose pull $APP_SERVICE
+export IMAGE_TAG
+docker compose pull $APP_SERVICE
 
 # ── Ensure database and cache are running ──
 echo ""
 echo ">>> Ensuring database and cache services are running..."
-infisical run \
-    --projectId="$INFISICAL_PROJECT_ID" \
-    --env="prod" \
-    -- docker compose up -d db redis
+docker compose up -d db redis
 
-# ── Run migrations (with secrets injected) ──
+# Give database time to initialize with the correct password
+echo ">>> Waiting for database to initialize..."
+sleep 10
+
+# ── Run migrations ──
 echo ""
 echo ">>> Running migrations..."
-infisical run \
-    --projectId="$INFISICAL_PROJECT_ID" \
-    --env="prod" \
-    -- docker compose run --rm migrate
+docker compose run --rm migrate
 
-# ── Deploy new version (with secrets injected) ──
+# ── Deploy new version ──
 echo ""
 echo ">>> Starting new version..."
-infisical run \
-    --projectId="$INFISICAL_PROJECT_ID" \
-    --env="prod" \
-    -- docker compose up -d --no-deps $APP_SERVICE
+docker compose up -d --no-deps $APP_SERVICE
 
 # ── Health check ──
 echo ""
@@ -131,10 +94,7 @@ if [ $RETRIES -eq 0 ]; then
     fi
 
     # Rollback: use the previous image tag
-    IMAGE_TAG="$CURRENT_TAG" infisical run \
-        --projectId="$INFISICAL_PROJECT_ID" \
-        --env="prod" \
-        -- docker compose up -d --no-deps $APP_SERVICE
+    IMAGE_TAG="$CURRENT_TAG" docker compose up -d --no-deps $APP_SERVICE
 
     # Verify rollback
     sleep 5
