@@ -1,4 +1,4 @@
-name: url_shortener
+# name: url_shortener
 
 services:
   app:
