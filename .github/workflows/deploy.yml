@@ -102,11 +102,16 @@ jobs:
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
+        env:
+          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
+          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_PROJECT_ID }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
         with:
           host: ${{ env.VPS_HOST }}
           username: ${{ env.VPS_SSH_USER }}
           key: ${{ env.VPS_SSH_KEY }}
-          envs: REGISTRY_USERNAME,REGISTRY_PASSWORD
+          envs: REGISTRY_USERNAME,REGISTRY_PASSWORD,INFISICAL_CLIENT_ID,INFISICAL_CLIENT_SECRET,INFISICAL_PROJECT_ID,IMAGE_TAG
           script: |
             APP_DIR="/opt/app/url-shortener"
             sudo mkdir -p "$APP_DIR/deployments/production"
@@ -114,12 +119,10 @@ jobs:
             cd "$APP_DIR/deployments/production"
             echo "$REGISTRY_PASSWORD" | docker login ghcr.io -u "$REGISTRY_USERNAME" --password-stdin
             chmod +x deploy.sh
-            IMAGE_TAG="${{ steps.tag.outputs.tag }}"
             export INFISICAL_TOKEN=$(infisical login \
               --method=universal-auth \
-              --client-id="${{ secrets.INFISICAL_CLIENT_ID }}" \
-              --client-secret="${{ secrets.INFISICAL_CLIENT_SECRET }}" \
+              --client-id="$INFISICAL_CLIENT_ID" \
+              --client-secret="$INFISICAL_CLIENT_SECRET" \
               --silent \
               --plain)
-            export INFISICAL_PROJECT_ID="${{ vars.INFISICAL_PROJECT_ID }}"
             infisical run --env=prod -- ./deploy.sh "${IMAGE_TAG}"
