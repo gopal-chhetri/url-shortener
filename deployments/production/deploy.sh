@@ -49,23 +49,14 @@ echo ">>> Pulling image..."
 export IMAGE_TAG
 docker compose pull $APP_SERVICE
 
-# ── Ensure database and cache are running (wait for healthchecks) ──
+# ── Ensure database and cache are running ──
 echo ""
 echo ">>> Ensuring database and cache services are running..."
-docker compose up -d --wait db redis
+docker compose up -d db redis
 
-# ── Reconcile DB credentials (self-heal on password rotation) ──
-# POSTGRES_PASSWORD is only applied on FIRST init of the pgdata volume.
-# If the secret was rotated later, the persisted role keeps the old password.
-# Local socket connections use trust auth, so we can reset it without one.
-echo ""
-echo ">>> Reconciling database credentials..."
-docker compose exec -T db \
-    psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d postgres \
-    -v role="$DB_USER" -v pass="$DB_PASS" <<'SQL'
-ALTER ROLE :"role" WITH LOGIN PASSWORD :'pass';
-SQL
-echo "    ✓ Database password synced"
+# Give database time to initialize with the correct password
+echo ">>> Waiting for database to initialize..."
+sleep 10
 
 # ── Run migrations ──
 echo ""
