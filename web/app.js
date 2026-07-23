@@ -5,6 +5,23 @@
 
 'use strict';
 
+/* ── Theme ── */
+function getPreferredTheme() {
+  const stored = localStorage.getItem('su_theme');
+  if (stored === 'light' || stored === 'dark') return stored;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function setTheme(theme) {
+  document.documentElement.classList.toggle('dark', theme === 'dark');
+  localStorage.setItem('su_theme', theme);
+}
+
+function toggleTheme() {
+  const isDark = document.documentElement.classList.contains('dark');
+  setTheme(isDark ? 'light' : 'dark');
+}
+
 /* ── State ── */
 const state = {
   token: localStorage.getItem('su_token') || null,
@@ -61,9 +78,8 @@ function fmt(n) {
 
 function showToast(msg, type = 'success') {
   const t = $('toast');
-  t.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'alert-circle'}"></i> <span>${msg}</span>`;
-  lucide.createIcons({ root: t });
-  t.className = `toast toast-${type} glass-panel`;
+  t.innerHTML = `<i class="ph ph-${type === 'success' ? 'check-circle' : 'warning-circle'}"></i> <span>${msg}</span>`;
+  t.className = `toast toast-${type}`;
   clearTimeout(t._timer);
   t._timer = setTimeout(() => { t.className = 'toast hidden'; }, 4000);
 }
@@ -77,9 +93,19 @@ function setLoading(btn, on) {
   sp.classList.toggle('hidden', !on);
 }
 
+function css(token) {
+  return getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+}
+
+function hsla(token, alpha) {
+  const val = css(token);
+  const m = val.match(/hsl\(([^)]+)\)/);
+  return m ? `hsla(${m[1]}, ${alpha})` : val;
+}
+
 function refreshIcons() {
-  if (window.lucide) {
-    lucide.createIcons();
+  if (window.PhosphorIcons) {
+    PhosphorIcons.render();
   }
 }
 
@@ -179,10 +205,10 @@ $('form-login').addEventListener('submit', async e => {
     // Response wrapper has { data: { token, user } }
     const { token, user } = res.data;
     enterApp(user, token);
-    showToast(`Session established for ${user.first_name}`);
+    showToast(`Signed in as ${user.first_name}`);
   } catch (err) {
     const errEl = $('auth-error');
-    errEl.innerHTML = `<i data-lucide="alert-triangle"></i> Authentication Failed: ${err.message}`;
+    errEl.innerHTML = `<i class="ph ph-warning"></i> ${err.message}`;
     errEl.classList.remove('hidden');
     refreshIcons();
   } finally {
@@ -208,7 +234,7 @@ $('form-register').addEventListener('submit', async e => {
       method: 'POST',
       body: JSON.stringify(payload)
     });
-    showToast('Identity initialized. Please authenticate.');
+    showToast('Account created. Sign in to continue.');
     toggleForms(false);
   } catch (err) {
     showToast(err.message, 'error');
@@ -263,17 +289,23 @@ document.querySelectorAll('.nav-item').forEach(item => {
 /* ─────────────────────────────────────────
    DASHBOARD
 ──────────────────────────────────────── */
+function skeletonRows(containerId, rows = 5, cols = 5) {
+  const tbody = $(containerId);
+  if (!tbody) return;
+  tbody.innerHTML = Array.from({ length: rows }, () =>
+    `<tr>${Array.from({ length: cols }, () =>
+      `<td><div class="skeleton skeleton-text"></div></td>`
+    ).join('')}</tr>`
+  ).join('');
+}
+
 async function loadDashboard() {
+  skeletonRows('tbody-recent-urls', 4, 5);
+
   try {
-    // 1. Fetch URLs
     const res = await apiFetch('/urls?limit=5');
     const urls = res.data || [];
-    
-    // Total count comes from pagination metadata, assume active/clicks need aggregating for now, 
-    // or ideally a dedicated /urls/stats endpoint exists. 
-    // Since we don't have a specific user stats endpoint, we'll approximate from list for now.
-    
-    // 2. Animate basic counts (in a real app, you'd fetch user stats directly)
+
     animateCount($('stat-my-urls'), res.metadata?.total || urls.length);
     animateCount($('stat-clicks'),  urls.reduce((acc, u) => acc + (u.click_count||0), 0));
     animateCount($('stat-active'),  urls.filter(u => u.is_active !== false).length);
@@ -301,7 +333,7 @@ function animateCount(el, target) {
 function renderRecentUrls(urls) {
   const tbody = $('tbody-recent-urls');
   if (!urls.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="table-empty">No routes deployed yet.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class="ph ph-link ph-lg"></i><h3>No routes yet</h3><p>Create your first shortened link above.</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = urls.map(u => `
@@ -321,10 +353,10 @@ function renderRecentUrls(urls) {
             <span class="toggle-track"><span class="toggle-thumb"></span></span>
           </label>
           <button class="btn btn-ghost btn-xs" onclick="showAnalytics('${u.id}', '${u.short_url}')">
-            <i data-lucide="bar-chart-2" class="icon-sm"></i>
+            <i class="ph ph-chart-bar ph-sm"></i>
           </button>
           <button class="btn btn-danger btn-xs" onclick="deleteUrl('${u.id}')">
-            <i data-lucide="trash-2" class="icon-sm"></i>
+            <i class="ph ph-trash ph-sm"></i>
           </button>
         </div>
       </td>
@@ -355,7 +387,7 @@ $('form-create-url').addEventListener('submit', async e => {
     linkEl.href = urlData.short_url;
     resultEl.classList.remove('hidden');
 
-    showToast('Routing endpoint deployed. ⚡');
+    showToast('Link created.');
     $('form-create-url').reset();
     
     if (state.currentView === 'dashboard') loadDashboard();
@@ -426,22 +458,25 @@ function renderLineChart(data) {
   const ctx = $('chart-daily').getContext('2d');
   if (state.charts.daily) state.charts.daily.destroy();
 
+  const trace = css('--trace');
+  const surface = css('--surface');
+
   const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-  gradient.addColorStop(0,   'rgba(124, 58, 237, 0.4)');
-  gradient.addColorStop(1,   'rgba(124, 58, 237, 0.01)');
+  gradient.addColorStop(0, hsla('--trace', 0.35));
+  gradient.addColorStop(1, hsla('--trace', 0.01));
 
   state.charts.daily = new Chart(ctx, {
     type: 'line',
     data: {
       labels: data.labels,
       datasets: [{
-        label: 'Resolves',
+        label: 'Clicks',
         data: data.data,
-        borderColor: '#7c3aed',
+        borderColor: trace,
         backgroundColor: gradient,
         borderWidth: 2,
-        pointBackgroundColor: '#0ea5e9',
-        pointBorderColor: '#090714',
+        pointBackgroundColor: trace,
+        pointBorderColor: surface,
         pointBorderWidth: 2,
         pointRadius: 4,
         tension: 0.3,
@@ -463,21 +498,21 @@ function renderDonutChart(canvasId, data) {
       labels: data.labels,
       datasets: [{
         data: data.data,
-        backgroundColor: ['#7c3aed','#0ea5e9','#27c93f','#ffbd2e','#ff5f56'],
-        borderColor: '#16122b',
+        backgroundColor: [css('--trace'), css('--mark'), css('--data'), css('--success'), css('--danger')],
+        borderColor: css('--surface'),
         borderWidth: 2,
         hoverOffset: 4,
       }],
     },
     options: {
       ...chartDefaults({ legend: true }),
-      cutout: '70%',
+      cutout: '68%',
     },
   });
 }
 
 function chartDefaults({ legend }) {
-  return {
+    return {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -485,30 +520,30 @@ function chartDefaults({ legend }) {
         display: !!legend,
         position: 'bottom',
         labels: {
-          color: '#94a3b8',
-          font: { family: 'Fira Code', size: 10 },
+          color: css('--muted'),
+          font: { family: 'JetBrains Mono', size: 10 },
           boxWidth: 10, padding: 12,
         },
       },
       tooltip: {
-        backgroundColor: 'rgba(22,18,43,0.95)',
-        titleColor: '#f8fafc',
-        bodyColor: '#94a3b8',
-        borderColor: 'rgba(124,58,237,0.3)',
+        backgroundColor: hsla('--surface', 0.95),
+        titleColor: css('--text'),
+        bodyColor: css('--muted'),
+        borderColor: hsla('--trace', 0.3),
         borderWidth: 1, padding: 10, cornerRadius: 8,
-        titleFont: { family: 'Outfit', weight: '600' },
+        titleFont: { family: 'Inter', weight: '600' },
         bodyFont:  { family: 'Inter' },
       },
     },
     scales: legend ? undefined : {
       x: {
-        ticks: { color: '#94a3b8', font: { family: 'Fira Code', size: 10 } },
-        grid:  { color: 'rgba(124,58,237,0.06)' },
+        ticks: { color: css('--muted'), font: { family: 'JetBrains Mono', size: 10 } },
+        grid:  { color: hsla('--trace', 0.06) },
         border:{ color: 'transparent' },
       },
       y: {
-        ticks: { color: '#94a3b8', font: { family: 'Fira Code', size: 10 } },
-        grid:  { color: 'rgba(124,58,237,0.06)' },
+        ticks: { color: css('--muted'), font: { family: 'JetBrains Mono', size: 10 } },
+        grid:  { color: hsla('--trace', 0.06) },
         border:{ color: 'transparent' },
       },
     },
@@ -519,6 +554,8 @@ function chartDefaults({ legend }) {
    MY URLS VIEW
 ──────────────────────────────────────── */
 async function loadMyUrls(page = 1) {
+  skeletonRows('tbody-all-urls', 6, 6);
+
   try {
     const res = await apiFetch(`/urls?page=${page}&limit=10&sort=${state.userUrlSort}`);
     let urls = res.data || [];
@@ -529,7 +566,7 @@ async function loadMyUrls(page = 1) {
     
     const tbody = $('tbody-all-urls');
     if (!urls.length) {
-      tbody.innerHTML = `<tr><td colspan="6" class="table-empty">${state.urlFilter === 'active' ? 'No active routes.' : 'No routes found.'}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="ph ph-link ph-lg"></i><h3>No routes found</h3><p>${state.urlFilter === 'active' ? 'No active routes.' : 'No routes found.'}</p></div></td></tr>`;
       $('pagination-urls').innerHTML = '';
       return;
     }
@@ -538,7 +575,7 @@ async function loadMyUrls(page = 1) {
       <tr>
         <td><a href="${u.short_url}" target="_blank" class="short-link data-font">${u.short_url.split('/').pop()}</a></td>
         <td class="url-orig-cell hide-mobile" title="${u.original_url}">${u.original_url}</td>
-        <td class="data-font text-nebula hide-tablet">${new Date(u.created_at).toLocaleDateString()}</td>
+        <td class="data-font text-muted hide-tablet">${new Date(u.created_at).toLocaleDateString()}</td>
         <td class="data-font text-data">${fmt(u.click_count || 0)}</td>
         <td class="hide-mobile">
           <span class="status-badge ${u.is_active !== false ? 'active' : 'inactive'}">
@@ -552,10 +589,10 @@ async function loadMyUrls(page = 1) {
               <span class="toggle-track"><span class="toggle-thumb"></span></span>
             </label>
             <button class="btn btn-ghost btn-xs" onclick="switchView('dashboard'); setTimeout(()=>showAnalytics('${u.id}', '${u.short_url}'), 300)">
-              <i data-lucide="bar-chart-2" class="icon-sm"></i>
+              <i class="ph ph-chart-bar ph-sm"></i>
             </button>
             <button class="btn btn-danger btn-xs" onclick="deleteUrl('${u.id}')">
-              <i data-lucide="trash-2" class="icon-sm"></i>
+              <i class="ph ph-trash ph-sm"></i>
             </button>
           </div>
         </td>
@@ -573,6 +610,8 @@ async function loadMyUrls(page = 1) {
    ADMIN USERS VIEW
 ──────────────────────────────────────── */
 async function loadAdminUsers(page = 1) {
+  skeletonRows('tbody-admin-users', 6, 5);
+
   try {
     // Stats
     const statsRes = await apiFetch('/admin/stats');
@@ -585,7 +624,13 @@ async function loadAdminUsers(page = 1) {
     // Users
     const usersRes = await apiFetch(`/admin/users?page=${page}&limit=10`);
     const users = usersRes.data || [];
-    
+
+    if (!users.length) {
+      $('tbody-admin-users').innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class="ph ph-users ph-lg"></i><h3>No users</h3><p>No users found.</p></div></td></tr>`;
+      $('pagination-admin-users').innerHTML = '';
+      return;
+    }
+
     $('tbody-admin-users').innerHTML = users.map(u => `
       <tr>
         <td>
@@ -596,7 +641,7 @@ async function loadAdminUsers(page = 1) {
             <span class="data-font">${u.first_name} ${u.last_name||''}</span>
           </div>
         </td>
-        <td class="text-nebula hide-mobile">${u.email}</td>
+        <td class="text-muted hide-mobile">${u.email}</td>
         <td><span class="role-badge ${u.role}">${u.role}</span></td>
         <td class="hide-tablet">
           <span class="status-badge ${u.is_active ? 'active' : 'inactive'}">
@@ -628,6 +673,8 @@ async function loadAdminUsers(page = 1) {
    ADMIN LINKS VIEW
 ──────────────────────────────────────── */
 async function loadAdminLinks(page = 1) {
+  skeletonRows('tbody-admin-urls', 6, 6);
+
   try {
     const params = new URLSearchParams({
       page: page.toString(),
@@ -660,7 +707,7 @@ async function loadAdminLinks(page = 1) {
       const emptyMsg = state.adminUrlUserId 
         ? 'No routes found for this user.' 
         : (state.adminUrlFilter === 'active' ? 'No active routes.' : 'No routes found.');
-      tbody.innerHTML = `<tr><td colspan="6" class="table-empty">${emptyMsg}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="ph ph-link ph-lg"></i><h3>No routes</h3><p>${emptyMsg}</p></div></td></tr>`;
       $('pagination-admin-urls').innerHTML = '';
       return;
     }
@@ -677,13 +724,13 @@ async function loadAdminLinks(page = 1) {
       <tr>
         <td><a href="${u.short_url}" target="_blank" class="short-link data-font">${u.short_url.split('/').pop()}</a></td>
         <td class="url-orig-cell hide-mobile" title="${u.original_url}">${u.original_url}</td>
-        <td class="data-font text-nebula hide-tablet">${ownerDisplay}</td>
+        <td class="data-font text-muted hide-tablet">${ownerDisplay}</td>
         <td class="hide-mobile">
           <span class="status-badge ${u.is_active !== false ? 'active' : 'inactive'}">
             <span class="status-dot"></span>${u.is_active !== false ? 'Live' : 'Offline'}
           </span>
         </td>
-        <td class="data-font text-nebula">${u.click_count || 0}</td>
+        <td class="data-font text-muted">${u.click_count || 0}</td>
         <td>
           <div class="table-actions">
             <label class="toggle-switch" title="Toggle State">
@@ -691,7 +738,7 @@ async function loadAdminLinks(page = 1) {
               <span class="toggle-track"><span class="toggle-thumb"></span></span>
             </label>
             <button class="btn btn-danger btn-xs" onclick="deleteAdminUrl('${u.id}')">
-              <i data-lucide="trash-2" class="icon-sm"></i>
+              <i class="ph ph-trash ph-sm"></i>
             </button>
           </div>
         </td>
@@ -721,7 +768,7 @@ function filterByUser(userId, userName) {
   indicator.innerHTML = `
     <span class="filter-text">Filtering by: <strong>${userName}</strong></span>
     <button class="btn btn-ghost btn-xs" onclick="clearUserFilter()">
-      <i data-lucide="x" class="icon-sm"></i> Clear
+      <i class="ph ph-x ph-sm"></i> Clear
     </button>
   `;
   header.appendChild(indicator);
@@ -741,7 +788,7 @@ async function toggleAdminUrl(id, active) {
       method: 'PUT',
       body: JSON.stringify({ is_active: active })
     });
-    showToast(`Route ${active ? 'Live' : 'Offline'}`);
+    showToast(active ? 'Link is live.' : 'Link disabled.');
     loadAdminLinks(1);
   } catch(err) {
     showToast(err.message, 'error');
@@ -752,7 +799,7 @@ async function deleteAdminUrl(id) {
   if (!confirm('Are you sure you want to permanently delete this route?')) return;
   try {
     await apiFetch(`/admin/urls/${id}`, { method: 'DELETE' });
-    showToast('Route terminated', 'success');
+    showToast('Link deleted.', 'success');
     loadAdminLinks(1);
   } catch(err) {
     showToast(err.message, 'error');
@@ -768,7 +815,7 @@ async function toggleUrl(id, active) {
       method: 'PATCH',
       body: JSON.stringify({ is_active: active })
     });
-    showToast(`Route ${active ? 'Live' : 'Offline'}`);
+    showToast(active ? 'Link is live.' : 'Link disabled.');
     
     // Refresh current view softly
     if (state.currentView === 'dashboard') loadDashboard();
@@ -784,7 +831,7 @@ async function deleteUrl(id) {
   if (!confirm('Are you sure you want to permanently delete this route?')) return;
   try {
     await apiFetch(`/urls/${id}`, { method: 'DELETE' });
-    showToast('Route terminated', 'success');
+    showToast('Link deleted.', 'success');
     if (state.currentView === 'dashboard') loadDashboard();
     if (state.currentView === 'my-urls')   loadMyUrls();
   } catch(err) {
@@ -798,7 +845,7 @@ async function toggleUser(id, active) {
       method: 'PUT',
       body: JSON.stringify({ is_active: active })
     });
-    showToast(`Identity ${active ? 'activated' : 'suspended'}`);
+    showToast(active ? 'User activated.' : 'User suspended.');
     loadAdminUsers();
   } catch(err) {
     showToast(err.message, 'error');
@@ -812,7 +859,7 @@ async function toggleRole(id, currentRole) {
       method: 'PUT',
       body: JSON.stringify({ role: newRole })
     });
-    showToast(`Access level updated`);
+    showToast('Role updated.');
     loadAdminUsers();
   } catch(err) {
     showToast(err.message, 'error');
@@ -931,6 +978,8 @@ if (mobileMenuToggle && sidebar && sidebarOverlay) {
    BOOT
 ──────────────────────────────────────── */
 (function init() {
+  setTheme(getPreferredTheme());
+  document.getElementById('theme-toggle-app')?.addEventListener('click', toggleTheme);
   refreshIcons();
   updateNavbar();
   

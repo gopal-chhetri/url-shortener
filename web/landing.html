@@ -4,60 +4,74 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ShortURL</title>
-  <meta name="description" content="A high-performance URL shortener and link management platform. Turn messy links into precise, measurable data.">
+  <meta name="description" content="Shorten URLs and track every click from one dashboard. Real-time analytics, device tracking, and link management.">
+  <meta property="og:title" content="ShortURL">
+  <meta property="og:description" content="Shorten URLs and track every click from one dashboard. Real-time analytics, device tracking, and link management.">
+  <meta property="og:image" content="/app/logo.png">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" type="image/png" href="/app/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/app/tokens.css">
   <link rel="stylesheet" href="/app/navbar.css">
   <link rel="stylesheet" href="/app/landing.css">
 </head>
 <body>
-  
-  <div class="beam-container">
-    <div class="beam"></div>
+
+  <a href="#main-content" class="skip-link">Skip to content</a>
+
+  <div class="trace-container">
+    <div class="trace-line"></div>
   </div>
 
   <nav class="glass-nav" id="top-nav">
     <a href="/app/landing.html" class="nav-brand">
-      <i data-lucide="zap" class="logo-icon text-pulse"></i>
-      <span class="brand-text">ShortURL</span>
+      <img class="logo-img" src="/app/logo.png" alt="ShortURL">
+      <span>ShortURL</span>
     </a>
     <div class="nav-links">
       <a href="#features">Features</a>
       <a href="https://github.com/gopal-chhetri/url-shortener" target="_blank" rel="noopener">Docs</a>
+      <button class="theme-toggle" id="theme-toggle-landing" aria-label="Toggle theme">
+        <i class="ph ph-moon"></i>
+        <i class="ph ph-sun"></i>
+      </button>
       <a href="/app/index.html#login" class="nav-btn btn-ghost">Sign In</a>
       <a href="/app/index.html#register" class="nav-btn btn-primary">Start Building</a>
     </div>
   </nav>
 
-  <main>
+  <main id="main-content">
     <section class="hero">
       <div class="hero-content">
+        <p class="hero-eyebrow">Link management platform</p>
         <h1 class="hero-title">
-          <span>Measure</span> <span>Every</span> <span>Click.</span>
+          Every link leaves a <em>trace</em>.
         </h1>
         <p class="hero-subtitle">
-          A high-performance URL management platform built for speed, reliability, and deep telemetry.
+          Shorten URLs, track every click, and understand your audience — all from one dashboard.
         </p>
-        
-        <div class="demo-terminal glass-panel">
+
+        <div class="demo-terminal card">
           <div class="terminal-header">
-            <span class="dot red"></span>
-            <span class="dot yellow"></span>
-            <span class="dot green"></span>
-            <span class="terminal-title">bash: link generator</span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="terminal-label">shorturl</span>
           </div>
           <div class="terminal-body">
             <div class="input-line">
-              <span class="prompt">$</span>
-              <input type="text" id="demo-input" placeholder="Paste a long, messy URL here..." autocomplete="off">
-              <button id="demo-btn" class="btn-terminal">Execute</button>
+              <span class="prompt">&gt;</span>
+              <input type="text" id="demo-input" placeholder="Paste a long URL to shorten it..." autocomplete="off">
+              <button id="demo-btn" class="btn-terminal">Shorten</button>
             </div>
             <div id="demo-output" class="output-line hidden">
-              <span class="processing">[processing telemetry]... <span class="success">OK</span></span>
+              <div class="processing"><span class="trace-dot"></span> Tracing route...</div>
               <div class="result-block">
-                <span class="result-label">Target:</span> <a href="#" id="result-link" class="result-link"></a>
+                <span class="result-label">Short link</span>
+                <a href="#" id="result-link" class="result-link"></a>
                 <button id="copy-btn" class="btn-copy">Copy</button>
               </div>
             </div>
@@ -66,64 +80,101 @@
       </div>
     </section>
 
-    <section id="features" class="bento-grid-section">
-      <h2 class="section-title">Telemetry & Control</h2>
-      
-      <div class="bento-grid">
-        <div class="bento-card span-2 glass-panel">
-          <div class="card-icon"><i data-lucide="bar-chart-3" class="text-data"></i></div>
-          <h3>Deep Analytics</h3>
-          <p>Gain absolute visibility into your audience. Track device profiles, browser fingerprints, and geographic origin in real-time.</p>
-          <div class="bento-visual viz-bar-chart">
-            <div class="bar h-60"></div>
-            <div class="bar h-100"></div>
-            <div class="bar h-40"></div>
-            <div class="bar h-80"></div>
+    <section id="features" class="features-section">
+      <div class="section-header">
+        <h2>Know what happens after you share a link.</h2>
+        <p class="section-subtitle">Real-time click data, device breakdowns, geographic maps — everything you need to measure impact.</p>
+      </div>
+
+      <div class="feature-row">
+        <div class="feature-card text-card">
+          <div class="feature-icon bg-trace">
+            <i class="ph ph-chart-bar text-trace"></i>
+          </div>
+          <h3>See every click</h3>
+          <p>Track browser, device, and location data for every link you share. Know who opened what, when, and where.</p>
+        </div>
+        <div class="feature-card visual-card">
+          <div class="viz-bar-chart">
+            <div class="viz-bar h-60"></div>
+            <div class="viz-bar h-100"></div>
+            <div class="viz-bar h-40"></div>
+            <div class="viz-bar h-80"></div>
+            <div class="viz-bar h-70"></div>
+            <div class="viz-bar h-55"></div>
+            <div class="viz-bar h-90"></div>
           </div>
         </div>
-        
-        <div class="bento-card glass-panel">
-          <div class="card-icon"><i data-lucide="zap" class="text-pulse"></i></div>
-          <h3>Edge Routing</h3>
-          <p>Sub-10ms redirects powered by distributed edge networks. Never lose a click to latency.</p>
+      </div>
+
+      <div class="feature-row">
+        <div class="feature-card visual-card">
+          <div class="viz-speed">
+            <div class="viz-speed-ring">
+              <span class="viz-speed-value">9ms</span>
+            </div>
+            <div class="viz-speed-text">
+              <span class="viz-speed-label">Avg. redirect</span>
+              <div class="viz-speed-line"></div>
+              <span class="viz-speed-label">Edge routed</span>
+            </div>
+          </div>
         </div>
-        
-        <div class="bento-card glass-panel">
-          <div class="card-icon"><i data-lucide="shield-check" class="text-success"></i></div>
-          <h3>Link Governance</h3>
-          <p>Instantly toggle link states. Protect your brand with granular access controls and audit logs.</p>
-          <div class="bento-visual toggle-demo">
-            <span class="status-indicator active">Live</span>
+        <div class="feature-card text-card">
+          <div class="feature-icon bg-trace">
+            <i class="ph ph-lightning text-trace"></i>
+          </div>
+          <h3>Fast by default</h3>
+          <p>Sub-10ms redirects. Links resolve instantly, so you never lose a visitor to latency.</p>
+        </div>
+      </div>
+
+      <div class="feature-row">
+        <div class="feature-card text-card">
+          <div class="feature-icon bg-trace">
+            <i class="ph ph-shield-check text-trace"></i>
+          </div>
+          <h3>Full control</h3>
+          <p>Toggle links on and off, manage access with role-based permissions, and keep an audit trail of every change.</p>
+        </div>
+        <div class="feature-card visual-card">
+          <div class="viz-toggle">
+            <div class="viz-toggle-group">
+              <span class="viz-badge-live">Live</span>
+              <div class="viz-toggle-switch"></div>
+              <span class="viz-toggle-label">Route active</span>
+            </div>
+            <div class="viz-toggle-group">
+              <span class="viz-badge-offline">Off</span>
+              <div class="viz-toggle-switch" style="background: var(--danger-dim); border-color: var(--danger);"></div>
+              <span class="viz-toggle-label">Route disabled</span>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <section id="privacy" class="cta-section">
-      <div class="cta-content glass-panel" style="max-width: 720px; margin: 0 auto;">
-        <h2>Privacy</h2>
-        <p style="color: var(--nebula); margin-top: 0.75rem;">
-          ShortURL stores only the data required to operate links and analytics: account details,
-          shortened URLs, and anonymous click telemetry (device, browser, and coarse location when available).
-          We do not sell personal data. Contact your administrator to request account deletion.
+    <section class="privacy-section" id="privacy">
+      <div class="privacy-card">
+        <h3>Privacy</h3>
+        <p>
+          ShortURL stores only the data needed to operate links and analytics: account details, shortened URLs, and anonymous click data (device, browser, and coarse location when available). We don't sell personal data. Contact your administrator to request account deletion.
         </p>
       </div>
     </section>
 
     <section class="cta-section">
-      <div class="cta-content glass-panel">
-        <h2>Ready to optimize your links?</h2>
-        <p>Join thousands of developers and marketers building better digital experiences.</p>
-        <a href="/app/index.html" class="btn-primary large">Create Free Account</a>
-      </div>
+      <h2>Ready to measure every link?</h2>
+      <p>Join thousands of developers and marketers building better digital experiences.</p>
+      <a href="/app/index.html#register" class="btn-primary btn-large">Create free account</a>
     </section>
   </main>
 
-  <footer class="glass-footer">
+  <footer class="footer">
     <div class="footer-content">
       <div class="footer-brand">
-        <i data-lucide="zap" class="logo-icon text-pulse"></i>
-        <span class="brand-text">ShortURL</span>
+        <img class="footer-logo" src="/app/logo.png" alt="">
+        <span>ShortURL</span>
       </div>
       <div class="footer-links">
         <a href="https://github.com/gopal-chhetri/url-shortener" target="_blank" rel="noopener">Documentation</a>
@@ -133,17 +184,7 @@
     </div>
   </footer>
 
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
   <script src="/app/landing.js"></script>
-  <script>lucide.createIcons();</script>
-  <script>
-    fetch('/api/v1/config').then(r => r.json()).then(cfg => {
-      if (cfg.base_url) {
-        document.querySelectorAll('[data-docs-link]').forEach(a => {
-          a.href = cfg.base_url + '/swagger/index.html';
-        });
-      }
-    }).catch(() => {});
-  </script>
 </body>
 </html>

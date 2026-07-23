@@ -3,27 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShortURL</title>
-  <meta name="description" content="ShortURL: A premium URL shortening service with analytics and role-based access control." />
+  <title>Dashboard</title>
+  <meta name="description" content="ShortURL: URL shortening with click analytics and role-based access control." />
+  <meta property="og:title" content="Dashboard" />
+  <meta property="og:description" content="Shorten URLs and track every click from one dashboard." />
+  <meta property="og:image" content="/app/logo.png" />
+  <meta property="og:type" content="website" />
   <link rel="icon" type="image/png" href="/app/logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/app/tokens.css" />
   <link rel="stylesheet" href="/app/navbar.css" />
   <link rel="stylesheet" href="/app/style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
 </head>
 <body>
 
+  <a href="#view-app" class="skip-link">Skip to content</a>
+
 <nav class="glass-nav" id="top-nav">
   <a href="/app/landing.html" class="nav-brand">
-    <i data-lucide="zap" class="logo-icon text-pulse"></i>
-    <span class="brand-text">ShortURL</span>
+    <img class="logo-img" src="/app/logo.png" alt="ShortURL" />
+    <span>ShortURL</span>
   </a>
   <div class="nav-links">
     <a href="/app/landing.html#features">Features</a>
     <a href="https://github.com/gopal-chhetri/url-shortener" target="_blank" rel="noopener">Docs</a>
+    <button class="theme-toggle" id="theme-toggle-app" aria-label="Toggle theme">
+      <i class="ph ph-moon"></i>
+      <i class="ph ph-sun"></i>
+    </button>
     <a href="/app/index.html" class="nav-btn btn-ghost" id="nav-sign-in">Sign In</a>
     <a href="/app/index.html" class="nav-btn btn-primary" id="nav-cta">Start Building</a>
   </div>
@@ -31,91 +42,94 @@
 
 <!-- ─── LOGIN VIEW ─────────────────────────────────────────────────────────── -->
 <div id="view-login" class="auth-screen">
-  <div class="beam-container"><div class="beam"></div></div>
-  <div class="auth-card glass-panel">
-    <div class="auth-logo">
-      <i data-lucide="zap" class="logo-icon text-pulse"></i>
+  <div class="auth-card">
+    <div class="auth-header">
+      <img class="auth-logo" src="/app/logo.png" alt="ShortURL" />
       <h1>ShortURL</h1>
     </div>
-    <p class="auth-subtitle">Precision link management</p>
+    <p class="auth-subtitle">Short links, measured.</p>
 
     <div id="auth-error" class="alert alert-error hidden"></div>
 
     <!-- Login Form -->
     <form id="form-login" class="auth-form active">
-      <div class="field-group">
+      <div class="field">
         <label for="login-email">Email</label>
         <input type="email" id="login-email" placeholder="you@example.com" required />
       </div>
-      <div class="field-group">
+      <div class="field">
         <label for="login-password">Password</label>
-        <input type="password" id="login-password" placeholder="••••••••" required />
+        <input type="password" id="login-password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" required />
       </div>
       <button type="submit" class="btn btn-primary btn-full" id="btn-login">
-        <span class="btn-text">Authenticate</span>
+        <span class="btn-text">Sign in</span>
         <span class="btn-spinner hidden"></span>
       </button>
-      <p class="auth-switch">No access? <a href="#" id="go-register">Request Access</a></p>
+      <p class="auth-switch">No account? <a href="#" id="go-register">Create one</a></p>
     </form>
 
     <!-- Register Form -->
     <form id="form-register" class="auth-form hidden">
       <div class="field-row">
-        <div class="field-group">
-          <label for="reg-first">First Name</label>
+        <div class="field">
+          <label for="reg-first">First name</label>
           <input type="text" id="reg-first" placeholder="Ada" required />
         </div>
-        <div class="field-group">
-          <label for="reg-last">Last Name</label>
+        <div class="field">
+          <label for="reg-last">Last name</label>
           <input type="text" id="reg-last" placeholder="Lovelace" required />
         </div>
       </div>
-      <div class="field-group">
+      <div class="field">
         <label for="reg-email">Email</label>
         <input type="email" id="reg-email" placeholder="ada@example.com" required />
       </div>
-      <div class="field-group">
+      <div class="field">
         <label for="reg-password">Password</label>
-        <input type="password" id="reg-password" placeholder="min 6 characters" required />
+        <input type="password" id="reg-password" placeholder="Min 6 characters" required />
       </div>
       <button type="submit" class="btn btn-primary btn-full" id="btn-register">
-        <span class="btn-text">Initialize Account</span>
+        <span class="btn-text">Create account</span>
         <span class="btn-spinner hidden"></span>
       </button>
-      <p class="auth-switch">Already initialized? <a href="#" id="go-login">Authenticate</a></p>
+      <p class="auth-switch">Already have an account? <a href="#" id="go-login">Sign in</a></p>
     </form>
   </div>
 </div>
 
-<!-- Mobile menu toggle (outside app shell so z-index works against top nav) -->
-<button class="mobile-menu-toggle" id="mobile-menu-toggle">
-  <i data-lucide="menu"></i>
+<!-- Mobile menu toggle -->
+<button class="mobile-toggle" id="mobile-menu-toggle">
+  <i class="ph ph-list"></i>
 </button>
 
 <!-- ─── APP SHELL ──────────────────────────────────────────────────────────── -->
 <div id="view-app" class="app hidden">
-  
+
   <!-- Sidebar overlay for mobile -->
   <div class="sidebar-overlay" id="sidebar-overlay"></div>
-  
+
   <!-- Sidebar -->
-  <aside class="sidebar glass-panel-no-radius" id="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <i data-lucide="zap" class="logo-icon text-pulse"></i>
+      <img class="sidebar-logo" src="/app/logo.png" alt="ShortURL" />
       <span class="sidebar-title">ShortURL</span>
     </div>
     <nav class="sidebar-nav">
       <a href="#" class="nav-item active" data-view="dashboard" id="nav-dashboard">
-        <i data-lucide="layout-dashboard" class="nav-icon"></i> Dashboard
+        <i class="ph ph-layout nav-icon"></i>
+        <span>Dashboard</span>
       </a>
       <a href="#" class="nav-item" data-view="my-urls" id="nav-my-urls">
-        <i data-lucide="link" class="nav-icon"></i> Links
+        <i class="ph ph-link nav-icon"></i>
+        <span>Links</span>
       </a>
       <a href="#" class="nav-item hidden" data-view="admin-users" id="nav-admin-users">
-        <i data-lucide="users" class="nav-icon"></i> Users
+        <i class="ph ph-users nav-icon"></i>
+        <span>Users</span>
       </a>
       <a href="#" class="nav-item hidden" data-view="admin-links" id="nav-admin-links">
-        <i data-lucide="shield-alert" class="nav-icon"></i> All Links
+        <i class="ph ph-shield-warning nav-icon"></i>
+        <span>All links</span>
       </a>
     </nav>
     <div class="sidebar-footer">
@@ -127,7 +141,8 @@
         </div>
       </div>
       <button class="btn btn-ghost btn-sm btn-full" id="btn-logout">
-        <i data-lucide="log-out" class="icon-sm"></i> Terminate Session
+        <i class="ph ph-sign-out ph-sm"></i>
+        <span>Sign out</span>
       </button>
     </div>
   </aside>
@@ -138,81 +153,87 @@
     <!-- ── DASHBOARD VIEW ──────────────────────────────────────────────────── -->
     <section id="page-dashboard" class="page active">
       <header class="page-header">
-        <h2>Telemetry Overview</h2>
-        <p class="page-subtitle">Real-time metrics for your managed links</p>
+        <h2>Dashboard</h2>
+        <p class="page-subtitle">Your links at a glance</p>
       </header>
 
-      <div class="stats-grid" id="stats-grid">
-        <div class="stat-card glass-panel">
-          <div class="stat-icon bg-pulse-ghost"><i data-lucide="link-2" class="text-pulse"></i></div>
+      <div class="stats-row" id="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon bg-trace">
+            <i class="ph ph-link-simple text-trace"></i>
+          </div>
           <div class="stat-info">
-            <span class="stat-label">Managed Links</span>
-            <span class="stat-value" id="stat-my-urls">—</span>
+            <span class="stat-label">Links</span>
+            <span class="stat-value" id="stat-my-urls">&mdash;</span>
           </div>
         </div>
-        <div class="stat-card glass-panel">
-          <div class="stat-icon bg-data-ghost"><i data-lucide="mouse-pointer-click" class="text-data"></i></div>
+        <div class="stat-card">
+          <div class="stat-icon bg-data">
+            <i class="ph ph-cursor-click text-data"></i>
+          </div>
           <div class="stat-info">
-            <span class="stat-label">Total Resolves</span>
-            <span class="stat-value" id="stat-clicks">—</span>
+            <span class="stat-label">Clicks</span>
+            <span class="stat-value" id="stat-clicks">&mdash;</span>
           </div>
         </div>
-        <div class="stat-card glass-panel">
-          <div class="stat-icon bg-success-ghost"><i data-lucide="activity" class="text-success"></i></div>
+        <div class="stat-card">
+          <div class="stat-icon bg-success">
+            <i class="ph ph-waveform text-success"></i>
+          </div>
           <div class="stat-info">
-            <span class="stat-label">Active Endpoints</span>
-            <span class="stat-value" id="stat-active">—</span>
+            <span class="stat-label">Active</span>
+            <span class="stat-value" id="stat-active">&mdash;</span>
           </div>
         </div>
       </div>
 
       <!-- Create URL Panel -->
-      <div class="card glass-panel create-card">
-        <h3>Deploy New Link</h3>
+      <div class="card create-card">
+        <h3>Create link</h3>
         <form id="form-create-url" class="create-form">
           <div class="create-inputs">
-            <div class="input-wrapper" style="flex: 2">
-              <i data-lucide="globe"></i>
+            <div class="input-wrapper input-flex-2">
+              <i class="ph ph-globe"></i>
               <input type="url" id="input-original-url" placeholder="https://example.com/very/long/target/path" required />
             </div>
-            <div class="input-wrapper" style="flex: 1">
-              <i data-lucide="hash"></i>
+            <div class="input-wrapper input-flex-1">
+              <i class="ph ph-hash"></i>
               <input type="text" id="input-custom-slug" placeholder="custom-slug (optional)" />
             </div>
             <button type="submit" class="btn btn-primary" id="btn-shorten">
-              <i data-lucide="zap" class="icon-sm"></i> Deploy
+              <i class="ph ph-lightning ph-sm"></i> Shorten
             </button>
           </div>
         </form>
-        <div id="shorten-result" class="shorten-result hidden glass-panel">
-          <i data-lucide="check-circle" class="text-success"></i>
-          <span>Endpoint deployed: </span>
-          <a id="result-short-url" href="#" target="_blank" class="short-link data-font"></a>
+        <div id="shorten-result" class="shorten-result hidden">
+          <i class="ph ph-check-circle text-success"></i>
+          <span>Created: </span>
+          <a id="result-short-url" href="#" target="_blank" class="short-link"></a>
           <button class="btn btn-ghost btn-sm" id="btn-copy">
-            <i data-lucide="copy" class="icon-sm"></i> Copy
+            <i class="ph ph-copy ph-sm"></i> Copy
           </button>
         </div>
       </div>
 
       <!-- Recent URLs Table -->
-      <div class="card glass-panel">
+      <div class="card">
         <div class="card-header">
-          <h3>Recent Deployments</h3>
-          <button class="btn btn-ghost btn-sm" id="btn-view-all-urls">View Registry <i data-lucide="arrow-right" class="icon-sm"></i></button>
+          <h3>Recent links</h3>
+          <button class="btn btn-ghost btn-sm" id="btn-view-all-urls">View all <i class="ph ph-arrow-right ph-sm"></i></button>
         </div>
         <div class="table-wrapper">
           <table class="data-table" id="table-recent-urls">
             <thead>
               <tr>
-                <th>Endpoint</th>
-                <th class="hide-mobile">Target</th>
+                <th>Short link</th>
+                <th class="hide-mobile">Original URL</th>
                 <th>Clicks</th>
                 <th class="hide-mobile">Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="tbody-recent-urls">
-              <tr><td colspan="5" class="table-empty">Initializing data...</td></tr>
+              <tr><td colspan="5" class="table-empty">Loading...</td></tr>
             </tbody>
           </table>
         </div>
@@ -220,26 +241,26 @@
 
       <!-- Analytics for selected URL -->
       <div id="analytics-panel" class="hidden">
-        <div class="card glass-panel">
+        <div class="card">
           <div class="card-header">
-            <h3>Telemetry Data: <span id="analytics-url-label" class="data-font text-pulse"></span></h3>
-            <button class="btn btn-ghost btn-sm" id="btn-close-analytics"><i data-lucide="x" class="icon-sm"></i> Close</button>
+            <h3>Analytics: <span id="analytics-url-label" class="data-font text-trace"></span></h3>
+            <button class="btn btn-ghost btn-sm" id="btn-close-analytics"><i class="ph ph-x ph-sm"></i> Close</button>
           </div>
           <div class="charts-grid">
-            <div class="chart-card glass-panel">
-              <h4>Resolution Volume (7 days)</h4>
+            <div class="chart-card">
+              <h4>Clicks (7 days)</h4>
               <canvas id="chart-daily" height="200"></canvas>
             </div>
-            <div class="chart-card glass-panel">
-              <h4>Client Signatures</h4>
+            <div class="chart-card">
+              <h4>Device</h4>
               <canvas id="chart-device" height="200"></canvas>
             </div>
-            <div class="chart-card glass-panel">
-              <h4>Browser Telemetry</h4>
+            <div class="chart-card">
+              <h4>Browser</h4>
               <canvas id="chart-browser" height="200"></canvas>
             </div>
-            <div class="chart-card glass-panel">
-              <h4>Geographic Distribution</h4>
+            <div class="chart-card">
+              <h4>Location</h4>
               <canvas id="chart-geo" height="200"></canvas>
             </div>
           </div>
@@ -250,34 +271,34 @@
     <!-- ── MY URLS VIEW ────────────────────────────────────────────────────── -->
     <section id="page-my-urls" class="page hidden">
       <header class="page-header">
-        <h2>Links Registry</h2>
-        <p class="page-subtitle">Manage your deployed routing endpoints</p>
+        <h2>Links</h2>
+        <p class="page-subtitle">Manage your shortened URLs</p>
       </header>
       <div class="tabs-container">
-        <button class="tab-btn active" data-tab="active" id="tab-active">Active Links</button>
-        <button class="tab-btn" data-tab="all" id="tab-all">All Links</button>
+        <button class="tab-btn active" data-tab="active" id="tab-active">Active</button>
+        <button class="tab-btn" data-tab="all" id="tab-all">All</button>
       </div>
-      <div class="search-sort-bar" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-        <select id="user-url-sort" class="btn btn-ghost btn-sm" style="flex: 1;">
-          <option value="date">Sort by Date</option>
-          <option value="clicks">Sort by Clicks</option>
+      <div class="search-sort-bar">
+        <select id="user-url-sort" class="btn btn-ghost btn-sm">
+          <option value="date">Sort by date</option>
+          <option value="clicks">Sort by clicks</option>
         </select>
       </div>
-      <div class="card glass-panel">
+      <div class="card">
         <div class="table-wrapper">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Endpoint</th>
-                <th class="hide-mobile">Target Path</th>
-                <th class="hide-tablet">Deployed</th>
+                <th>Short link</th>
+                <th class="hide-mobile">Original URL</th>
+                <th class="hide-tablet">Created</th>
                 <th>Clicks</th>
                 <th class="hide-mobile">Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="tbody-all-urls">
-              <tr><td colspan="6" class="table-empty">Initializing data...</td></tr>
+              <tr><td colspan="6" class="table-empty">Loading...</td></tr>
             </tbody>
           </table>
         </div>
@@ -288,54 +309,60 @@
     <!-- ── ADMIN USERS VIEW ─────────────────────────────────────────────────── -->
     <section id="page-admin-users" class="page hidden">
       <header class="page-header">
-        <h2>Identity Directory</h2>
-        <p class="page-subtitle">Manage system users and access levels</p>
+        <h2>Users</h2>
+        <p class="page-subtitle">Manage accounts and permissions</p>
       </header>
 
-      <!-- Admin Stats -->
-      <div class="stats-grid" id="admin-stats-grid">
-        <div class="stat-card glass-panel">
-          <div class="stat-icon bg-warning-ghost"><i data-lucide="users" class="text-warning"></i></div>
+      <div class="stats-row" id="admin-stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon bg-trace">
+            <i class="ph ph-users text-trace"></i>
+          </div>
           <div class="stat-info">
-            <span class="stat-label">Identities</span>
-            <span class="stat-value" id="admin-stat-users">—</span>
+            <span class="stat-label">Users</span>
+            <span class="stat-value" id="admin-stat-users">&mdash;</span>
           </div>
         </div>
-        <div class="stat-card glass-panel">
-          <div class="stat-icon bg-pulse-ghost"><i data-lucide="radio" class="text-pulse"></i></div>
+        <div class="stat-card">
+          <div class="stat-icon bg-success">
+            <i class="ph ph-broadcast text-success"></i>
+          </div>
           <div class="stat-info">
-            <span class="stat-label">Active Routes</span>
-            <span class="stat-value" id="admin-stat-active-urls">—</span>
+            <span class="stat-label">Active links</span>
+            <span class="stat-value" id="admin-stat-active-urls">&mdash;</span>
           </div>
         </div>
-        <div class="stat-card glass-panel">
-          <div class="stat-icon bg-danger-ghost"><i data-lucide="power-off" class="text-danger"></i></div>
+        <div class="stat-card">
+          <div class="stat-icon bg-danger">
+            <i class="ph ph-toggle-left text-danger"></i>
+          </div>
           <div class="stat-info">
-            <span class="stat-label">Offline Routes</span>
-            <span class="stat-value" id="admin-stat-inactive-urls">—</span>
+            <span class="stat-label">Offline links</span>
+            <span class="stat-value" id="admin-stat-inactive-urls">&mdash;</span>
           </div>
         </div>
-        <div class="stat-card glass-panel">
-          <div class="stat-icon bg-data-ghost"><i data-lucide="activity" class="text-data"></i></div>
+        <div class="stat-card">
+          <div class="stat-icon bg-data">
+            <i class="ph ph-waveform text-data"></i>
+          </div>
           <div class="stat-info">
-            <span class="stat-label">Global Resolves</span>
-            <span class="stat-value" id="admin-stat-clicks">—</span>
+            <span class="stat-label">Total clicks</span>
+            <span class="stat-value" id="admin-stat-clicks">&mdash;</span>
           </div>
         </div>
       </div>
 
-      <!-- Users Management -->
-      <div class="card glass-panel">
+      <div class="card">
         <div class="card-header">
-          <h3>Identity Directory</h3>
+          <h3>Users</h3>
         </div>
         <div class="table-wrapper">
           <table class="data-table">
             <thead>
-              <tr><th>Identity</th><th class="hide-mobile">Email</th><th>Access Level</th><th class="hide-tablet">State</th><th>Actions</th></tr>
+              <tr><th>Name</th><th class="hide-mobile">Email</th><th>Role</th><th class="hide-tablet">Status</th><th>Actions</th></tr>
             </thead>
             <tbody id="tbody-admin-users">
-              <tr><td colspan="5" class="table-empty">Initializing data...</td></tr>
+              <tr><td colspan="5" class="table-empty">Loading...</td></tr>
             </tbody>
           </table>
         </div>
@@ -346,37 +373,36 @@
     <!-- ── ADMIN LINKS VIEW ──────────────────────────────────────────────────── -->
     <section id="page-admin-links" class="page hidden">
       <header class="page-header">
-        <h2>Route Registry</h2>
-        <p class="page-subtitle">Manage all routing endpoints across the system</p>
+        <h2>All links</h2>
+        <p class="page-subtitle">Manage every link in the system</p>
       </header>
 
-      <!-- URLs Management -->
-      <div class="card glass-panel">
+      <div class="card">
         <div class="card-header">
-          <h3>All Routes</h3>
+          <h3>All links</h3>
         </div>
         <div class="tabs-container">
-          <button class="tab-btn active" data-admin-tab="active" id="admin-tab-active">Active Routes</button>
-          <button class="tab-btn" data-admin-tab="all" id="admin-tab-all">All Routes</button>
+          <button class="tab-btn active" data-admin-tab="active" id="admin-tab-active">Active</button>
+          <button class="tab-btn" data-admin-tab="all" id="admin-tab-all">All</button>
         </div>
-        <div class="search-sort-bar" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-          <div class="input-wrapper" style="flex: 2;">
-            <i data-lucide="search"></i>
-            <input type="text" id="admin-url-search" placeholder="Search by endpoint or target..." />
+        <div class="search-sort-bar">
+          <div class="input-wrapper input-flex-2">
+            <i class="ph ph-magnifying-glass"></i>
+            <input type="text" id="admin-url-search" placeholder="Search by short link or URL..." />
           </div>
-          <select id="admin-url-sort" class="btn btn-ghost btn-sm" style="flex: 1;">
-            <option value="date">Sort by Date</option>
-            <option value="name">Sort by Name</option>
-            <option value="clicks">Sort by Clicks</option>
+          <select id="admin-url-sort" class="btn btn-ghost btn-sm sort-select">
+            <option value="date">Sort by date</option>
+            <option value="name">Sort by name</option>
+            <option value="clicks">Sort by clicks</option>
           </select>
         </div>
         <div class="table-wrapper">
           <table class="data-table">
             <thead>
-              <tr><th>Endpoint</th><th class="hide-mobile">Target</th><th class="hide-tablet">Owner</th><th class="hide-mobile">Status</th><th>Clicks</th><th>Actions</th></tr>
+              <tr><th>Short link</th><th class="hide-mobile">Original URL</th><th class="hide-tablet">Owner</th><th class="hide-mobile">Status</th><th>Clicks</th><th>Actions</th></tr>
             </thead>
             <tbody id="tbody-admin-urls">
-              <tr><td colspan="6" class="table-empty">Initializing data...</td></tr>
+              <tr><td colspan="6" class="table-empty">Loading...</td></tr>
             </tbody>
           </table>
         </div>
@@ -388,21 +414,8 @@
 </div>
 
 <!-- Toast notification -->
-<div id="toast" class="toast hidden glass-panel"></div>
+<div id="toast" class="toast hidden"></div>
 
 <script src="/app/app.js"></script>
-<script>
-  if (window.lucide) {
-    lucide.createIcons();
-  }
-
-  fetch('/api/v1/config').then(r => r.json()).then(cfg => {
-    if (cfg.base_url) {
-      document.querySelectorAll('[data-docs-link]').forEach(a => {
-        a.href = cfg.base_url + '/swagger/index.html';
-      });
-    }
-  }).catch(() => {});
-</script>
 </body>
 </html>
