@@ -422,23 +422,23 @@ async function showAnalytics(id, shortUrl) {
     const d = res.data;
     
     const dailyData = {
-      labels: d.daily_clicks ? d.daily_clicks.map(x => x.date.split('T')[0]) : ['No Data'],
-      data: d.daily_clicks ? d.daily_clicks.map(x => x.clicks) : [0]
+      labels: d.daily_clicks ? d.daily_clicks.map(x => x.Date ? x.Date.split('T')[0] : 'Unknown') : ['No Data'],
+      data: d.daily_clicks ? d.daily_clicks.map(x => x.ClickCount) : [0]
     };
     
     const deviceData = {
-      labels: d.device_stats ? d.device_stats.map(x => x.device_type || 'Unknown') : ['No Data'],
-      data: d.device_stats ? d.device_stats.map(x => x.clicks) : [0]
+      labels: d.device_stats ? d.device_stats.map(x => x.Device || 'Unknown') : ['No Data'],
+      data: d.device_stats ? d.device_stats.map(x => x.Count) : [0]
     };
     
     const browserData = {
-      labels: d.browser_stats ? d.browser_stats.map(x => x.browser || 'Unknown') : ['No Data'],
-      data: d.browser_stats ? d.browser_stats.map(x => x.clicks) : [0]
+      labels: d.browser_stats ? d.browser_stats.map(x => x.Browser || 'Unknown') : ['No Data'],
+      data: d.browser_stats ? d.browser_stats.map(x => x.Count) : [0]
     };
 
     const geoData = {
-      labels: d.geo_stats ? d.geo_stats.map(x => x.country || 'Unknown') : ['No Data'],
-      data: d.geo_stats ? d.geo_stats.map(x => x.count) : [0]
+      labels: d.geo_stats ? d.geo_stats.map(x => x.Country || 'Unknown') : ['No Data'],
+      data: d.geo_stats ? d.geo_stats.map(x => x.Count) : [0]
     };
 
     renderLineChart(dailyData);
