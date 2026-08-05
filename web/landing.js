@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     demoBtn.textContent = '...';
     demoOutput.classList.remove('hidden');
     resultLink.parentElement.style.opacity = '0';
-    processingText.innerHTML = '<span class="trace-dot"></span> Tracing route…';
+    processingText.innerHTML = '<span class="trace-dot"></span> Tracing route...';
 
     setTimeout(() => {
       processingText.innerHTML = '<span class="trace-dot"></span> Route traced. Link ready.';
