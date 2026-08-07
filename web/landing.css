@@ -158,6 +158,12 @@
 
 .output-line.hidden { display: none; }
 
+.demo-hint {
+  margin-top: 0.75rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
 .processing {
   font-size: 0.8rem;
   color: var(--muted);

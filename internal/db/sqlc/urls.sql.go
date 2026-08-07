@@ -85,19 +85,25 @@ func (q *Queries) CountSearchURLs(ctx context.Context, shortUrl string) (int64, 
 }
 
 const createURL = `-- name: CreateURL :one
-INSERT INTO urls (original_url, short_url, user_id)
-VALUES ($1, $2, $3)
-RETURNING id, short_url, original_url, user_id, is_active, created_at, updated_at
+INSERT INTO urls (original_url, short_url, user_id, expires_at)
+VALUES ($1, $2, $3, $4)
+RETURNING id, short_url, original_url, user_id, is_active, created_at, updated_at, expires_at
 `
 
 type CreateURLParams struct {
 	OriginalUrl string
 	ShortUrl    string
 	UserID      pgtype.UUID
+	ExpiresAt   pgtype.Timestamptz
 }
 
 func (q *Queries) CreateURL(ctx context.Context, arg CreateURLParams) (Url, error) {
-	row := q.db.QueryRow(ctx, createURL, arg.OriginalUrl, arg.ShortUrl, arg.UserID)
+	row := q.db.QueryRow(ctx, createURL,
+		arg.OriginalUrl,
+		arg.ShortUrl,
+		arg.UserID,
+		arg.ExpiresAt,
+	)
 	var i Url
 	err := row.Scan(
 		&i.ID,
@@ -107,6 +113,7 @@ func (q *Queries) CreateURL(ctx context.Context, arg CreateURLParams) (Url, erro
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ExpiresAt,
 	)
 	return i, err
 }
@@ -117,6 +124,15 @@ UPDATE urls SET is_active = false, updated_at = NOW() WHERE id = $1
 
 func (q *Queries) DeleteURL(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteURL, id)
+	return err
+}
+
+const expireExpiredURLs = `-- name: ExpireExpiredURLs :exec
+UPDATE urls SET is_active = false, updated_at = NOW() WHERE is_active = true AND expires_at IS NOT NULL AND expires_at < NOW()
+`
+
+func (q *Queries) ExpireExpiredURLs(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, expireExpiredURLs)
 	return err
 }
 
@@ -172,7 +188,7 @@ func (q *Queries) GetTopURLsByClicks(ctx context.Context, limit int32) ([]GetTop
 }
 
 const getURLByID = `-- name: GetURLByID :one
-SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at FROM urls WHERE id = $1
+SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at, expires_at FROM urls WHERE id = $1
 `
 
 func (q *Queries) GetURLByID(ctx context.Context, id uuid.UUID) (Url, error) {
@@ -186,12 +202,13 @@ func (q *Queries) GetURLByID(ctx context.Context, id uuid.UUID) (Url, error) {
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ExpiresAt,
 	)
 	return i, err
 }
 
 const getURLByShortURL = `-- name: GetURLByShortURL :one
-SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at FROM urls WHERE short_url = $1 AND is_active = true
+SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at, expires_at FROM urls WHERE short_url = $1 AND is_active = true AND (expires_at IS NULL OR expires_at > NOW())
 `
 
 func (q *Queries) GetURLByShortURL(ctx context.Context, shortUrl string) (Url, error) {
@@ -205,6 +222,7 @@ func (q *Queries) GetURLByShortURL(ctx context.Context, shortUrl string) (Url, e
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ExpiresAt,
 	)
 	return i, err
 }
@@ -221,7 +239,7 @@ func (q *Queries) GetURLCount(ctx context.Context, userID pgtype.UUID) (int64, e
 }
 
 const listAllURLs = `-- name: ListAllURLs :many
-SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at FROM urls WHERE is_active = true LIMIT $1 OFFSET $2
+SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at, expires_at FROM urls WHERE is_active = true LIMIT $1 OFFSET $2
 `
 
 type ListAllURLsParams struct {
@@ -246,6 +264,7 @@ func (q *Queries) ListAllURLs(ctx context.Context, arg ListAllURLsParams) ([]Url
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -258,7 +277,7 @@ func (q *Queries) ListAllURLs(ctx context.Context, arg ListAllURLsParams) ([]Url
 }
 
 const listAllURLsAdmin = `-- name: ListAllURLsAdmin :many
-SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at FROM urls 
+SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at, expires_at FROM urls 
 ORDER BY is_active DESC, created_at DESC 
 LIMIT $1 OFFSET $2
 `
@@ -285,6 +304,7 @@ func (q *Queries) ListAllURLsAdmin(ctx context.Context, arg ListAllURLsAdminPara
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -297,7 +317,7 @@ func (q *Queries) ListAllURLsAdmin(ctx context.Context, arg ListAllURLsAdminPara
 }
 
 const listAllURLsAdminByName = `-- name: ListAllURLsAdminByName :many
-SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at FROM urls 
+SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at, expires_at FROM urls 
 ORDER BY is_active DESC, short_url ASC 
 LIMIT $1 OFFSET $2
 `
@@ -324,6 +344,7 @@ func (q *Queries) ListAllURLsAdminByName(ctx context.Context, arg ListAllURLsAdm
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -336,7 +357,7 @@ func (q *Queries) ListAllURLsAdminByName(ctx context.Context, arg ListAllURLsAdm
 }
 
 const listAllURLsByDate = `-- name: ListAllURLsByDate :many
-SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at FROM urls WHERE is_active = true ORDER BY created_at DESC LIMIT $1 OFFSET $2
+SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at, expires_at FROM urls WHERE is_active = true ORDER BY created_at DESC LIMIT $1 OFFSET $2
 `
 
 type ListAllURLsByDateParams struct {
@@ -361,6 +382,7 @@ func (q *Queries) ListAllURLsByDate(ctx context.Context, arg ListAllURLsByDatePa
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -373,7 +395,7 @@ func (q *Queries) ListAllURLsByDate(ctx context.Context, arg ListAllURLsByDatePa
 }
 
 const listURLs = `-- name: ListURLs :many
-SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at FROM urls WHERE user_id = $1 ORDER BY is_active DESC, created_at DESC LIMIT $2 OFFSET $3
+SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at, expires_at FROM urls WHERE user_id = $1 ORDER BY is_active DESC, created_at DESC LIMIT $2 OFFSET $3
 `
 
 type ListURLsParams struct {
@@ -399,6 +421,7 @@ func (q *Queries) ListURLs(ctx context.Context, arg ListURLsParams) ([]Url, erro
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -466,7 +489,7 @@ func (q *Queries) ListURLsByClicks(ctx context.Context, arg ListURLsByClicksPara
 }
 
 const searchURLs = `-- name: SearchURLs :many
-SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at FROM urls 
+SELECT id, short_url, original_url, user_id, is_active, created_at, updated_at, expires_at FROM urls 
 WHERE (short_url ILIKE $1 OR original_url ILIKE $1)
 ORDER BY is_active DESC, created_at DESC 
 LIMIT $2 OFFSET $3
@@ -495,6 +518,7 @@ func (q *Queries) SearchURLs(ctx context.Context, arg SearchURLsParams) ([]Url, 
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -507,7 +531,7 @@ func (q *Queries) SearchURLs(ctx context.Context, arg SearchURLsParams) ([]Url, 
 }
 
 const updateURL = `-- name: UpdateURL :one
-UPDATE urls SET original_url = $2, short_url = $3, updated_at = NOW() WHERE id = $1 AND is_active = true RETURNING id, short_url, original_url, user_id, is_active, created_at, updated_at
+UPDATE urls SET original_url = $2, short_url = $3, updated_at = NOW() WHERE id = $1 AND is_active = true RETURNING id, short_url, original_url, user_id, is_active, created_at, updated_at, expires_at
 `
 
 type UpdateURLParams struct {
@@ -527,12 +551,13 @@ func (q *Queries) UpdateURL(ctx context.Context, arg UpdateURLParams) (Url, erro
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ExpiresAt,
 	)
 	return i, err
 }
 
 const updateURLStatus = `-- name: UpdateURLStatus :one
-UPDATE urls SET is_active = $2, updated_at = NOW() WHERE id = $1 RETURNING id, short_url, original_url, user_id, is_active, created_at, updated_at
+UPDATE urls SET is_active = $2, updated_at = NOW() WHERE id = $1 RETURNING id, short_url, original_url, user_id, is_active, created_at, updated_at, expires_at
 `
 
 type UpdateURLStatusParams struct {
@@ -551,6 +576,7 @@ func (q *Queries) UpdateURLStatus(ctx context.Context, arg UpdateURLStatusParams
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ExpiresAt,
 	)
 	return i, err
 }

@@ -1,6 +1,6 @@
 # ShortURL
 
-A high-performance URL shortening service with analytics, role-based access control, and real-time telemetry.
+A URL shortening service with click analytics, custom slugs, role-based access control, and Redis caching.
 Live hosted on [shorturl.soylab.dpdns.org](https://shorturl.soylab.dpdns.org/).
 
 ## System Architecture

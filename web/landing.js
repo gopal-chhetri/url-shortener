@@ -29,8 +29,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultLink = document.getElementById('result-link');
   const copyBtn = document.getElementById('copy-btn');
   const processingText = document.querySelector('.processing');
+  const demoHint = document.getElementById('demo-hint');
 
-  demoBtn.addEventListener('click', () => {
+  demoBtn.addEventListener('click', async () => {
     const url = demoInput.value.trim();
 
     if (!url) {
@@ -43,29 +44,61 @@ document.addEventListener('DOMContentLoaded', () => {
     demoBtn.textContent = '...';
     demoOutput.classList.remove('hidden');
     resultLink.parentElement.style.opacity = '0';
-    processingText.innerHTML = '<span class="trace-dot"></span> Tracing route...';
+    processingText.innerHTML = '<span class="trace-dot"></span> Shortening...';
 
-    setTimeout(() => {
-      processingText.innerHTML = '<span class="trace-dot"></span> Route traced. Link ready.';
+    try {
+      const res = await fetch('/api/v1/shorten', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ original_url: url }),
+        credentials: 'same-origin',
+      });
 
-      setTimeout(() => {
-        const slug = Math.random().toString(36).substring(2, 8);
-        const shortUrl = `short.url/${slug}`;
-
-        resultLink.textContent = shortUrl;
-        resultLink.href = `https://${shortUrl}`;
-
-        resultLink.parentElement.style.transition = 'opacity 0.3s ease';
-        resultLink.parentElement.style.opacity = '1';
-
+      if (res.status === 429) {
+        setError('You\u2019ve used your free links. Create an account to keep shortening.');
         demoBtn.disabled = false;
         demoBtn.textContent = 'Shorten';
-      }, 400);
-    }, 600);
+        return;
+      }
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.message || 'Couldn\u2019t shorten that link. Please try again.');
+        demoBtn.disabled = false;
+        demoBtn.textContent = 'Shorten';
+        return;
+      }
+
+      const data = await res.json();
+      const shortUrl = data.data && data.data.short_url;
+      if (!shortUrl) {
+        setError('Something went wrong. Please try again.');
+        demoBtn.disabled = false;
+        demoBtn.textContent = 'Shorten';
+        return;
+      }
+
+      processingText.innerHTML = '<span class="trace-dot"></span> Link ready.';
+      resultLink.textContent = shortUrl;
+      resultLink.href = shortUrl;
+      resultLink.parentElement.style.transition = 'opacity 0.3s ease';
+      resultLink.parentElement.style.opacity = '1';
+
+      if (demoHint) demoHint.textContent = '';
+    } catch (err) {
+      setError('Network error. Please try again.');
+    }
+
+    demoBtn.disabled = false;
+    demoBtn.textContent = 'Shorten';
   });
 
   demoInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') demoBtn.click();
+  });
+
+  demoInput.addEventListener('input', () => {
+    if (demoHint) demoHint.textContent = 'Free demo: shorten up to 3 links without an account.';
   });
 
   copyBtn.addEventListener('click', () => {
@@ -85,4 +118,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 2000);
     });
   });
+
+  function setError(message) {
+    demoOutput.classList.remove('hidden');
+    resultLink.parentElement.style.opacity = '0';
+    processingText.innerHTML = `<span class="trace-dot"></span> ${message}`;
+    if (demoHint) demoHint.textContent = '';
+  }
 });

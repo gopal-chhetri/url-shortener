@@ -19,6 +19,9 @@ func EncodeBase62(num int64) string {
 	if num == 0 {
 		return string(base62Chars[0])
 	}
+	if num < 0 {
+		num = -num
+	}
 
 	var result []byte
 	for num > 0 {
@@ -28,6 +31,29 @@ func EncodeBase62(num int64) string {
 	}
 
 	// Reverse the result
+	for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
+		result[i], result[j] = result[j], result[i]
+	}
+
+	return string(result)
+}
+
+// encodeBigBase62 converts a big integer to base62 without the int64
+// truncation that can make the value negative and produce empty strings.
+func encodeBigBase62(num *big.Int) string {
+	if num.Sign() == 0 {
+		return string(base62Chars[0])
+	}
+
+	baseBig := big.NewInt(base)
+	mod := new(big.Int)
+	work := new(big.Int).Set(num)
+	var result []byte
+	for work.Sign() > 0 {
+		work.QuoRem(work, baseBig, mod)
+		result = append(result, base62Chars[mod.Int64()])
+	}
+
 	for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
 		result[i], result[j] = result[j], result[i]
 	}
@@ -58,11 +84,9 @@ func GenerateShortSlug(originalURL string, length int) string {
 	// Create SHA256 hash
 	hash := sha256.Sum256([]byte(originalURL))
 
-	// Convert hash to big integer
+	// Convert full hash to base62 (no int64 truncation)
 	num := new(big.Int).SetBytes(hash[:])
-
-	// Encode to base62
-	encoded := EncodeBase62(num.Int64())
+	encoded := encodeBigBase62(num)
 
 	// Trim to desired length
 	if len(encoded) > length {
@@ -82,7 +106,7 @@ func GenerateUniqueSlug(originalURL string, timestamp int64, length int) string 
 	combined := fmt.Sprintf("%s%d", originalURL, timestamp)
 	hash := sha256.Sum256([]byte(combined))
 	num := new(big.Int).SetBytes(hash[:])
-	encoded := EncodeBase62(num.Int64())
+	encoded := encodeBigBase62(num)
 
 	if len(encoded) > length {
 		encoded = encoded[:length]
@@ -95,6 +119,20 @@ func GenerateUniqueSlug(originalURL string, timestamp int64, length int) string 
 func IsBase62(str string) bool {
 	for _, char := range str {
 		if !strings.ContainsRune(base62Chars, char) {
+			return false
+		}
+	}
+	return true
+}
+
+// IsValidSlug checks if a string is a valid custom slug: base62 characters
+// plus hyphens and underscores.
+func IsValidSlug(str string) bool {
+	if str == "" {
+		return false
+	}
+	for _, char := range str {
+		if !IsBase62(string(char)) && char != '-' && char != '_' {
 			return false
 		}
 	}

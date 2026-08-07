@@ -40,6 +40,7 @@ type Url struct {
 	IsActive    pgtype.Bool
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
+	ExpiresAt   pgtype.Timestamptz
 }
 
 type User struct {

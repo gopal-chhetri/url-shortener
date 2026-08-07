@@ -2,6 +2,7 @@ package url
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	dbgen "github.com/gopal-chhetri/url-shortener/internal/db/sqlc"
@@ -15,6 +16,7 @@ type CreateURLDTO struct {
 	OriginalURL string     `json:"original_url"`
 	ShortURL    string     `json:"short_url"`
 	UserID      *uuid.UUID `json:"user_id"`
+	ExpiresAt   *time.Time `json:"expires_at"`
 	Tx          pgx.Tx     `json:"-"`
 }
 
@@ -84,6 +86,7 @@ type UrlRepositoryInterface interface {
 	CreateURL(ctx context.Context, dto CreateURLDTO) (dbgen.Url, error)
 	GetURLByID(ctx context.Context, dto GetURLByIDDTO) (dbgen.Url, error)
 	GetURLByShortURL(ctx context.Context, dto GetURLByShortURLDTO) (dbgen.Url, error)
+	ExpireExpiredURLs(ctx context.Context) error
 	UpdateURL(ctx context.Context, dto UpdateURLDTO) (dbgen.Url, error)
 	UpdateURLStatus(ctx context.Context, dto UpdateURLStatusDTO) (dbgen.Url, error)
 	DeleteURL(ctx context.Context, dto DeleteURLDTO) error
@@ -139,10 +142,16 @@ func (r *UrlRepository) CreateURL(ctx context.Context, dto CreateURLDTO) (dbgen.
 		userID = pgtype.UUID{Bytes: *dto.UserID, Valid: true}
 	}
 
+	var expiresAt pgtype.Timestamptz
+	if dto.ExpiresAt != nil {
+		expiresAt = pgtype.Timestamptz{Time: *dto.ExpiresAt, Valid: true}
+	}
+
 	url, err := querier.CreateURL(ctx, dbgen.CreateURLParams{
 		OriginalUrl: dto.OriginalURL,
 		ShortUrl:    dto.ShortURL,
 		UserID:      userID,
+		ExpiresAt:   expiresAt,
 	})
 	return url, translateError(err, "url")
 }
@@ -157,6 +166,10 @@ func (r *UrlRepository) GetURLByShortURL(ctx context.Context, dto GetURLByShortU
 	querier := r.getQuerier(dto.Tx)
 	url, err := querier.GetURLByShortURL(ctx, dto.ShortURL)
 	return url, translateError(err, "url")
+}
+
+func (r *UrlRepository) ExpireExpiredURLs(ctx context.Context) error {
+	return r.queries.ExpireExpiredURLs(ctx)
 }
 
 func (r *UrlRepository) UpdateURL(ctx context.Context, dto UpdateURLDTO) (dbgen.Url, error) {

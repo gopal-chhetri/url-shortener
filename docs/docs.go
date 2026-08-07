@@ -704,6 +704,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/shorten": {
+            "post": {
+                "description": "Create a short URL without signing in, limited to a few free links per visitor",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "urls"
+                ],
+                "summary": "Create a short URL without an account",
+                "parameters": [
+                    {
+                        "description": "Create URL request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_url.CreateURLRequestBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_url.URLResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/urls": {
             "get": {
                 "security": [

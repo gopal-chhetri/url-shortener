@@ -58,7 +58,7 @@ func SetupRoute(app *bootstrap.Application, r *gin.Engine) {
 	// So we register it separately on the main router
 
 	// Protected URL routes
-	url.SetupUrlRoute(app, r, protected, enforcer)
+	url.SetupUrlRoute(app, r, api, protected, enforcer)
 
 	// Admin routes (protected, role-based)
 	adminGroup := protected.Group("/admin")

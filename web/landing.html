@@ -48,10 +48,10 @@
       <div class="hero-content">
         <p class="hero-eyebrow">Link management platform</p>
         <h1 class="hero-title">
-          Every link leaves a <em>trace</em>.
+          Short links you can <em>track</em>.
         </h1>
         <p class="hero-subtitle">
-          Shorten URLs, track every click, and understand your audience - all from one dashboard.
+          Shorten a URL, then see how many people actually click it.
         </p>
 
         <div class="demo-terminal card">
@@ -67,6 +67,7 @@
               <input type="text" id="demo-input" placeholder="Paste a long URL to shorten it..." autocomplete="off">
               <button id="demo-btn" class="btn-terminal">Shorten</button>
             </div>
+            <div id="demo-hint" class="demo-hint">Free demo: shorten up to 3 links without an account.</div>
             <div id="demo-output" class="output-line hidden">
               <div class="processing"><span class="trace-dot"></span> Tracing route...</div>
               <div class="result-block">
@@ -111,12 +112,12 @@
         <div class="feature-card visual-card">
           <div class="viz-speed">
             <div class="viz-speed-ring">
-              <span class="viz-speed-value">9ms</span>
+              <span class="viz-speed-value">Fast</span>
             </div>
             <div class="viz-speed-text">
-              <span class="viz-speed-label">Avg. redirect</span>
+              <span class="viz-speed-label">Cached redirect</span>
               <div class="viz-speed-line"></div>
-              <span class="viz-speed-label">Edge routed</span>
+              <span class="viz-speed-label">Redis backend</span>
             </div>
           </div>
         </div>
@@ -125,7 +126,7 @@
             <i class="ph ph-lightning text-trace"></i>
           </div>
           <h3>Fast by default</h3>
-          <p>Sub-10ms redirects. Links resolve instantly, so you never lose a visitor to latency.</p>
+          <p>Popular links resolve from a Redis cache in one step, so most redirects are quick.</p>
         </div>
       </div>
 
@@ -164,8 +165,8 @@
     </section>
 
     <section class="cta-section">
-      <h2>Ready to measure every link?</h2>
-      <p>Join thousands of developers and marketers building better digital experiences.</p>
+      <h2>Ready to try it?</h2>
+      <p>Shorten up to 3 links free, or create an account for the full dashboard.</p>
       <a href="/app/index.html#register" class="btn-primary btn-large">Create free account</a>
     </section>
   </main>

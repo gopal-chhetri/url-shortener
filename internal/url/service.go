@@ -19,6 +19,7 @@ type UrlServiceInterface interface {
 	CreateURL(ctx context.Context, dto CreateURLRequest) (*dbgen.Url, error)
 	GetURLByID(ctx context.Context, id uuid.UUID) (*dbgen.Url, error)
 	GetURLByShortURL(ctx context.Context, shortURL string) (*dbgen.Url, error)
+	ExpireExpiredURLs(ctx context.Context) error
 	UpdateURL(ctx context.Context, dto UpdateURLRequest, userID uuid.UUID) (*dbgen.Url, error)
 	UpdateURLStatus(ctx context.Context, id uuid.UUID, userID uuid.UUID, isActive bool) (*dbgen.Url, error)
 	DeleteURL(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
@@ -35,6 +36,7 @@ type CreateURLRequest struct {
 	OriginalURL string     `json:"original_url" binding:"required,url"`
 	CustomSlug  string     `json:"custom_slug,omitempty"`
 	UserID      *uuid.UUID `json:"user_id,omitempty"`
+	ExpiresAt   *time.Time `json:"-"`
 }
 
 type UpdateURLRequest struct {
@@ -82,8 +84,8 @@ func (s *UrlService) CreateURL(ctx context.Context, req CreateURLRequest) (*dbge
 	var shortURL string
 	if req.CustomSlug != "" {
 		// Validate custom slug
-		if !utils.IsBase62(req.CustomSlug) {
-			return nil, response.NewAppError("Custom slug must contain only alphanumeric characters")
+		if !utils.IsValidSlug(req.CustomSlug) {
+			return nil, response.NewAppError("Custom slug may contain letters, numbers, hyphens, and underscores")
 		}
 		shortURL = req.CustomSlug
 	} else {
@@ -104,6 +106,7 @@ func (s *UrlService) CreateURL(ctx context.Context, req CreateURLRequest) (*dbge
 		OriginalURL: req.OriginalURL,
 		ShortURL:    shortURL,
 		UserID:      req.UserID,
+		ExpiresAt:   req.ExpiresAt,
 	})
 	if err != nil {
 		s.logger.Error("Failed to create URL", zap.Error(err))
@@ -138,6 +141,10 @@ func (s *UrlService) GetURLByShortURL(ctx context.Context, shortURL string) (*db
 		if err == nil {
 			var cachedURL dbgen.Url
 			if err := json.Unmarshal([]byte(val), &cachedURL); err == nil {
+				if cachedURL.ExpiresAt.Valid && cachedURL.ExpiresAt.Time.Before(time.Now()) {
+					s.redis.Del(ctx, key)
+					return nil, response.NotFoundError{Model: "url"}
+				}
 				return &cachedURL, nil
 			}
 		}
@@ -156,6 +163,11 @@ func (s *UrlService) GetURLByShortURL(ctx context.Context, shortURL string) (*db
 	}
 
 	return &url, nil
+}
+
+// ExpireExpiredURLs marks expired anonymous URLs as inactive.
+func (s *UrlService) ExpireExpiredURLs(ctx context.Context) error {
+	return s.repo.ExpireExpiredURLs(ctx)
 }
 
 // UpdateURL updates a URL's details

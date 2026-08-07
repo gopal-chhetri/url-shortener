@@ -4,11 +4,13 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	dbgen "github.com/gopal-chhetri/url-shortener/internal/db/sqlc"
 	"github.com/gopal-chhetri/url-shortener/internal/infra"
+	"github.com/gopal-chhetri/url-shortener/internal/middleware"
 	"github.com/gopal-chhetri/url-shortener/internal/response"
 	"github.com/gopal-chhetri/url-shortener/internal/utils"
 	"go.uber.org/zap"
@@ -19,19 +21,22 @@ type UrlHandler struct {
 	logger     *zap.Logger
 	env        *infra.Env
 	geoService *infra.GeoService
+	demoQuota  *middleware.DemoQuota
 }
 
-func NewUrlHandler(urlService UrlServiceInterface, logger *zap.Logger, env *infra.Env, geoService *infra.GeoService) *UrlHandler {
+func NewUrlHandler(urlService UrlServiceInterface, logger *zap.Logger, env *infra.Env, geoService *infra.GeoService, demoQuota *middleware.DemoQuota) *UrlHandler {
 	return &UrlHandler{
 		urlService: urlService,
 		logger:     logger,
 		env:        env,
 		geoService: geoService,
+		demoQuota:  demoQuota,
 	}
 }
 
 type UrlHandlerInterface interface {
 	CreateURL(c *gin.Context)
+	CreateAnonymousURL(c *gin.Context)
 	GetURLByID(c *gin.Context)
 	RedirectURL(c *gin.Context)
 	ListURLs(c *gin.Context)
@@ -148,7 +153,63 @@ func (h *UrlHandler) CreateURL(c *gin.Context) {
 	response.SuccessCreatedResponse(c, resp)
 }
 
-// GetURLByID godoc
+// CreateAnonymousURL godoc
+// @Summary Create a short URL without an account
+// @Description Create a short URL without signing in, limited to a few free links per visitor
+// @Tags urls
+// @Accept json
+// @Produce json
+// @Param request body CreateURLRequestBody true "Create URL request"
+// @Success 201 {object} response.Response{data=URLResponse}
+// @Failure 400 {object} response.Response
+// @Failure 429 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /shorten [post]
+func (h *UrlHandler) CreateAnonymousURL(c *gin.Context) {
+	var req CreateURLRequestBody
+	if err := c.ShouldBindJSON(&req); err != nil {
+		infra.LogError(h.logger, "Failed to bind anonymous URL request", err)
+		response.ValidationErrorResponse(c, err)
+		return
+	}
+
+	allowed, _ := h.demoQuota.Take(c)
+	if !allowed {
+		h.demoQuota.EnsureCookie(c)
+		response.NewHttpError(c, http.StatusTooManyRequests,
+			"Free demo limit reached. Create an account to keep shortening links.")
+		return
+	}
+	h.demoQuota.EnsureCookie(c)
+
+	var expiresAt *time.Time
+	if h.env.AnonURLWindowHours > 0 {
+		expiry := time.Now().Add(time.Duration(h.env.AnonURLWindowHours) * time.Hour)
+		expiresAt = &expiry
+	}
+
+	url, err := h.urlService.CreateURL(c.Request.Context(), CreateURLRequest{
+		OriginalURL: req.OriginalURL,
+		CustomSlug:  req.CustomSlug,
+		UserID:      nil,
+		ExpiresAt:   expiresAt,
+	})
+	if err != nil {
+		h.demoQuota.Release(c)
+		infra.LogError(h.logger, "Failed to create anonymous URL", err)
+		response.ErrorResponse(c, err)
+		return
+	}
+
+	h.logger.Info("Anonymous URL created",
+		zap.String("short_url", url.ShortUrl),
+		zap.String("original_url", url.OriginalUrl),
+	)
+
+	resp := toURLResponse(*url)
+	resp.ShortURL = h.buildFullShortURL(url.ShortUrl)
+	response.SuccessCreatedResponse(c, resp)
+}
 // @Summary Get URL by ID
 // @Description Get a specific URL by its ID
 // @Tags urls

@@ -26,6 +26,8 @@ type Env struct {
 	RedisPort                string
 	RedisPassword            string
 	RedisDB                  int
+	AnonURLLimit             int
+	AnonURLWindowHours       int
 }
 
 func NewEnv() *Env {
@@ -56,6 +58,15 @@ func (e *Env) loadFromEnvironment() {
 	e.RedisPort = getEnv("REDIS_PORT")
 	e.RedisPassword = getEnv("REDIS_PASSWORD")
 	e.RedisDB = getIntEnv("REDIS_DB")
+
+	e.AnonURLLimit = getIntEnv("ANON_URL_LIMIT")
+	if e.AnonURLLimit <= 0 {
+		e.AnonURLLimit = 3
+	}
+	e.AnonURLWindowHours = getIntEnv("ANON_URL_WINDOW_HOURS")
+	if e.AnonURLWindowHours <= 0 {
+		e.AnonURLWindowHours = 24
+	}
 }
 
 func getEnv(envName string) string {

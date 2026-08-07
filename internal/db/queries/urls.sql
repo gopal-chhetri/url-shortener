@@ -1,13 +1,16 @@
 -- name: CreateURL :one
-INSERT INTO urls (original_url, short_url, user_id)
-VALUES ($1, $2, $3)
+INSERT INTO urls (original_url, short_url, user_id, expires_at)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetURLByID :one
 SELECT * FROM urls WHERE id = $1;
 
 -- name: GetURLByShortURL :one
-SELECT * FROM urls WHERE short_url = $1 AND is_active = true;
+SELECT * FROM urls WHERE short_url = $1 AND is_active = true AND (expires_at IS NULL OR expires_at > NOW());
+
+-- name: ExpireExpiredURLs :exec
+UPDATE urls SET is_active = false, updated_at = NOW() WHERE is_active = true AND expires_at IS NOT NULL AND expires_at < NOW();
 
 -- name: UpdateURL :one
 UPDATE urls SET original_url = $2, short_url = $3, updated_at = NOW() WHERE id = $1 AND is_active = true RETURNING *;

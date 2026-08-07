@@ -650,6 +650,46 @@ paths:
       summary: Register a new user
       tags:
       - auth
+  /shorten:
+    post:
+      consumes:
+      - application/json
+      description: Create a short URL without signing in, limited to a few free links
+        per visitor
+      parameters:
+      - description: Create URL request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_url.CreateURLRequestBody'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_url.URLResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
+      summary: Create a short URL without an account
+      tags:
+      - urls
   /urls:
     get:
       description: Get a paginated list of URLs created by the authenticated user
