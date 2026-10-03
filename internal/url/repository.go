@@ -70,12 +70,6 @@ type ListAllURLsByDateDTO struct {
 	Tx     pgx.Tx `json:"-"`
 }
 
-type CountAllURLsByDateDTO struct {
-	StartDate string `json:"start_date"`
-	EndDate   string `json:"end_date"`
-	Tx        pgx.Tx `json:"-"`
-}
-
 type UpdateURLStatusDTO struct {
 	ID       uuid.UUID `json:"id"`
 	IsActive bool      `json:"is_active"`
@@ -95,7 +89,6 @@ type UrlRepositoryInterface interface {
 	ListAllURLs(ctx context.Context, dto ListAllURLsDTO) ([]dbgen.Url, error)
 	CountAllURLs(ctx context.Context, dto CountAllURLsDTO) (int64, error)
 	ListAllURLsByDate(ctx context.Context, dto ListAllURLsByDateDTO) ([]dbgen.Url, error)
-	CountAllURLsByDate(ctx context.Context, dto CountAllURLsByDateDTO) (int64, error)
 	ListURLsByClicks(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]dbgen.Url, error)
 	GetClickCountsByURLIDs(ctx context.Context, urlIDs []uuid.UUID) (map[uuid.UUID]int64, error)
 	GetPool() *pgxpool.Pool
@@ -124,16 +117,6 @@ func (r *UrlRepository) getQuerier(tx pgx.Tx) *dbgen.Queries {
 	return r.queries
 }
 
-func translateError(err error, model string) error {
-	if err == nil {
-		return nil
-	}
-	if err == pgx.ErrNoRows {
-		return response.NotFoundError{Model: model}
-	}
-	return err
-}
-
 func (r *UrlRepository) CreateURL(ctx context.Context, dto CreateURLDTO) (dbgen.Url, error) {
 	querier := r.getQuerier(dto.Tx)
 
@@ -153,19 +136,19 @@ func (r *UrlRepository) CreateURL(ctx context.Context, dto CreateURLDTO) (dbgen.
 		UserID:      userID,
 		ExpiresAt:   expiresAt,
 	})
-	return url, translateError(err, "url")
+	return url, response.TranslateDBError(err, "url")
 }
 
 func (r *UrlRepository) GetURLByID(ctx context.Context, dto GetURLByIDDTO) (dbgen.Url, error) {
 	querier := r.getQuerier(dto.Tx)
 	url, err := querier.GetURLByID(ctx, dto.ID)
-	return url, translateError(err, "url")
+	return url, response.TranslateDBError(err, "url")
 }
 
 func (r *UrlRepository) GetURLByShortURL(ctx context.Context, dto GetURLByShortURLDTO) (dbgen.Url, error) {
 	querier := r.getQuerier(dto.Tx)
 	url, err := querier.GetURLByShortURL(ctx, dto.ShortURL)
-	return url, translateError(err, "url")
+	return url, response.TranslateDBError(err, "url")
 }
 
 func (r *UrlRepository) ExpireExpiredURLs(ctx context.Context) error {
@@ -179,7 +162,7 @@ func (r *UrlRepository) UpdateURL(ctx context.Context, dto UpdateURLDTO) (dbgen.
 		ShortUrl:    dto.ShortURL,
 		OriginalUrl: dto.OriginalURL,
 	})
-	return url, translateError(err, "url")
+	return url, response.TranslateDBError(err, "url")
 }
 
 func (r *UrlRepository) DeleteURL(ctx context.Context, dto DeleteURLDTO) error {
@@ -193,7 +176,7 @@ func (r *UrlRepository) UpdateURLStatus(ctx context.Context, dto UpdateURLStatus
 		ID:       dto.ID,
 		IsActive: pgtype.Bool{Bool: dto.IsActive, Valid: true},
 	})
-	return url, translateError(err, "url")
+	return url, response.TranslateDBError(err, "url")
 }
 
 func (r *UrlRepository) ListURLs(ctx context.Context, dto ListURLsDTO) ([]dbgen.Url, error) {
@@ -203,13 +186,13 @@ func (r *UrlRepository) ListURLs(ctx context.Context, dto ListURLsDTO) ([]dbgen.
 		Limit:  dto.Limit,
 		Offset: dto.Offset,
 	})
-	return urls, translateError(err, "url")
+	return urls, response.TranslateDBError(err, "url")
 }
 
 func (r *UrlRepository) GetURLCount(ctx context.Context, dto GetURLCountDTO) (int64, error) {
 	querier := r.getQuerier(dto.Tx)
 	count, err := querier.GetURLCount(ctx, pgtype.UUID{Bytes: dto.UserID, Valid: true})
-	return count, translateError(err, "url")
+	return count, response.TranslateDBError(err, "url")
 }
 
 func (r *UrlRepository) ListAllURLs(ctx context.Context, dto ListAllURLsDTO) ([]dbgen.Url, error) {
@@ -218,13 +201,13 @@ func (r *UrlRepository) ListAllURLs(ctx context.Context, dto ListAllURLsDTO) ([]
 		Limit:  dto.Limit,
 		Offset: dto.Offset,
 	})
-	return urls, translateError(err, "url")
+	return urls, response.TranslateDBError(err, "url")
 }
 
 func (r *UrlRepository) CountAllURLs(ctx context.Context, dto CountAllURLsDTO) (int64, error) {
 	querier := r.getQuerier(dto.Tx)
 	count, err := querier.CountAllURLs(ctx)
-	return count, translateError(err, "url")
+	return count, response.TranslateDBError(err, "url")
 }
 
 func (r *UrlRepository) ListAllURLsByDate(ctx context.Context, dto ListAllURLsByDateDTO) ([]dbgen.Url, error) {
@@ -233,17 +216,12 @@ func (r *UrlRepository) ListAllURLsByDate(ctx context.Context, dto ListAllURLsBy
 		Limit:  dto.Limit,
 		Offset: dto.Offset,
 	})
-	return urls, translateError(err, "url")
-}
-
-func (r *UrlRepository) CountAllURLsByDate(ctx context.Context, dto CountAllURLsByDateDTO) (int64, error) {
-	querier := r.getQuerier(dto.Tx)
-	count, err := querier.CountAllURLsByDate(ctx, dbgen.CountAllURLsByDateParams{})
-	return count, translateError(err, "url")
+	return urls, response.TranslateDBError(err, "url")
 }
 
 func (r *UrlRepository) ListURLsByClicks(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]dbgen.Url, error) {
-	clickRows, err := r.queries.ListURLsByClicks(ctx, dbgen.ListURLsByClicksParams{
+	clickRows, err := r.queries.ListUserURLsByClicks(ctx, dbgen.ListUserURLsByClicksParams{
+		UserID: pgtype.UUID{Bytes: userID, Valid: true},
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -261,6 +239,7 @@ func (r *UrlRepository) ListURLsByClicks(ctx context.Context, userID uuid.UUID, 
 			IsActive:    row.IsActive,
 			CreatedAt:   row.CreatedAt,
 			UpdatedAt:   row.UpdatedAt,
+			ExpiresAt:   row.ExpiresAt,
 		}
 	}
 	return urls, nil

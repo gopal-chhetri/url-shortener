@@ -1,13 +1,21 @@
 package main
 
 import (
-	"github.com/gin-contrib/cors"
+	"context"
+	"errors"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	docs "github.com/gopal-chhetri/url-shortener/docs" // generated swagger docs
 	"github.com/gopal-chhetri/url-shortener/internal/bootstrap"
 	"github.com/gopal-chhetri/url-shortener/internal/routes"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"go.uber.org/zap"
 )
 
 // @title URL Shortener API
@@ -24,22 +32,56 @@ import (
 func main() {
 	app := bootstrap.NewApplication()
 
-	// Update Swagger host dynamically
-	docs.SwaggerInfo.Host = "localhost:" + app.Env.Port
+	defer app.Close()
 
+	// An empty host makes Swagger UI target whichever host served it, so
+	// "Try it out" works locally and in production alike.
+	docs.SwaggerInfo.Host = ""
+
+	if !app.Env.IsLocal() {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	r := gin.Default()
 
-	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"*"},
-		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders: []string{"*"},
-	}))
+	// Never trust X-Forwarded-For from arbitrary peers; it would let clients
+	// spoof their IP past the rate limiter and demo quota. In production the
+	// real client IP comes from Cloudflare's CF-Connecting-IP header.
+	if err := r.SetTrustedProxies(nil); err != nil {
+		panic(err)
+	}
+	if !app.Env.IsLocal() {
+		r.TrustedPlatform = gin.PlatformCloudflare
+	}
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	routes.SetupRoute(app, r)
 
-	if err := r.Run(":" + app.Env.Port); err != nil {
-		panic(err)
+	srv := &http.Server{
+		Addr:              ":" + app.Env.Port,
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			app.Logger.Fatal("Server failed", zap.Error(err))
+		}
+	}()
+	app.Logger.Info("Server started", zap.String("addr", srv.Addr))
+
+	<-ctx.Done()
+	app.Logger.Info("Shutting down, draining in-flight requests")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		app.Logger.Error("Graceful shutdown failed", zap.Error(err))
 	}
 }

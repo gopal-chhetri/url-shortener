@@ -1,13 +1,14 @@
 package middleware
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/gopal-chhetri/url-shortener/internal/auth"
+	"github.com/gopal-chhetri/url-shortener/internal/response"
 )
 
 type AuthMiddleware struct {
@@ -43,61 +44,44 @@ func (m *AuthMiddleware) JWTMiddleware() gin.HandlerFunc {
 
 		token := tokenParts[1]
 
-		// Validate token
-		claims, err := m.authService.ValidateToken(token)
+		// Signature, expiry, revocation and current account status/role
+		claims, err := m.authService.Authenticate(c.Request.Context(), token)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
+			var unauth response.UnauthorizedError
+			if errors.As(err, &unauth) {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": unauth.Message})
+				return
+			}
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "authentication failed"})
 			return
 		}
 
 		// Set user context
+		c.Set(auth.ClaimsContextKey, claims)
 		c.Set("user_id", claims.UserID)
 		c.Set("user_email", claims.Email)
-		c.Set("user_role", []string{claims.Role})
+		c.Set("user_role", claims.Role)
 
 		c.Next()
 	}
 }
 
-func (m *AuthMiddleware) CasbinMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Casbin middleware for fine-grained authorization
-		// For now, we just check if user is authenticated (already done by JWTMiddleware)
-		c.Next()
-	}
-}
-
+// RBACMiddleware rejects the request unless the caller's role is allowed to
+// perform action on resource according to the Casbin policy.
 func (m *AuthMiddleware) RBACMiddleware(resource, action string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get user roles from context
-		userRoleVal, ok := c.Get("user_role")
-		if !ok {
+		role := c.GetString("user_role")
+		if role == "" {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "access denied"})
 			return
 		}
 
-		userRole, ok := userRoleVal.(string)
-		if !ok {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "access denied"})
+		allowed, err := m.enforcer.Enforce(role, resource, action)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "permission check failed"})
 			return
 		}
-
-		// Check permissions for each role
-		hasPermission := false
-		fmt.Println(userRole)
-		for _, role := range userRole {
-			allowed, err := m.enforcer.Enforce(role, resource, action)
-			if err != nil {
-				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "permission check failed"})
-				return
-			}
-			if allowed {
-				hasPermission = true
-				break
-			}
-		}
-
-		if !hasPermission {
+		if !allowed {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
 			return
 		}

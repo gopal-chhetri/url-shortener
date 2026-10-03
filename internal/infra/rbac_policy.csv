@@ -13,3 +13,7 @@ p, user, profile, write
 p, user, urls, read
 p, user, urls, write
 p, user, urls, delete
+p, staff, profile, write
+p, staff, urls, read
+p, staff, urls, write
+p, staff, urls, delete

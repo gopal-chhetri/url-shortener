@@ -30,7 +30,7 @@ func SetupRoute(app *bootstrap.Application, r *gin.Engine) {
 	r.Use(rateLimiter.Limit())
 
 	userRepository := auth.NewUserRepository(app.Database)
-	authService := auth.NewAuthService(userRepository, app.Env, app.Logger)
+	authService := auth.NewAuthService(userRepository, auth.NewRedisTokenStore(app.Redis), app.Env, app.Logger)
 	authMiddleware := middleware.NewAuthMiddleware(authService, enforcer)
 
 	api := r.Group("/api/v1")
@@ -51,7 +51,7 @@ func SetupRoute(app *bootstrap.Application, r *gin.Engine) {
 
 	authProtected := protected.Group("/auth")
 
-	auth.SetupAuthRoute(app, authGroup, authProtected)
+	auth.SetupAuthRoute(app, authService, authGroup, authProtected)
 
 	// URL routes - public redirect endpoint
 	// Note: The redirect endpoint /:code needs to be outside /api/v1

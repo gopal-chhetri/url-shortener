@@ -25,6 +25,7 @@ function toggleTheme() {
 /* ── State ── */
 const state = {
   token: localStorage.getItem('su_token') || null,
+  refreshToken: localStorage.getItem('su_refresh') || null,
   user:  JSON.parse(localStorage.getItem('su_user') || 'null'),
   currentView: 'dashboard',
   urlFilter: 'active',
@@ -43,25 +44,48 @@ const API_BASE = (window.location.protocol === 'file:' || window.location.port =
 /* ─────────────────────────────────────────
    API WRAPPER
 ──────────────────────────────────────── */
-async function apiFetch(endpoint, options = {}) {
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout'];
+let refreshInFlight = null;
+
+/* Exchange the refresh token for a new pair. Concurrent 401s share one call. */
+function refreshSession() {
+  if (!state.refreshToken) return Promise.resolve(false);
+  if (!refreshInFlight) {
+    refreshInFlight = fetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: state.refreshToken }),
+    })
+      .then(async res => {
+        if (!res.ok) return false;
+        const { data } = await res.json();
+        setTokens(data.token, data.refresh_token);
+        return true;
+      })
+      .catch(() => false)
+      .finally(() => { refreshInFlight = null; });
+  }
+  return refreshInFlight;
+}
+
+async function apiFetch(endpoint, options = {}, retried = false) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
 
-  try {
-    const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
-    const data = await res.json();
-    
-    if (!res.ok) {
-      if (res.status === 401 && endpoint !== '/auth/login') {
-        logout(false);
-        throw new Error('Session expired');
+  const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+  const data = await res.json();
+
+  if (!res.ok) {
+    if (res.status === 401 && !AUTH_ENDPOINTS.includes(endpoint)) {
+      if (!retried && await refreshSession()) {
+        return apiFetch(endpoint, options, true);
       }
-      throw new Error(data.message || data.error || 'API Request Failed');
+      logout(false);
+      throw new Error('Session expired');
     }
-    return data;
-  } catch (err) {
-    throw err;
+    throw new Error(data.message || data.error || 'API Request Failed');
   }
+  return data;
 }
 
 /* ─────────────────────────────────────────
@@ -140,10 +164,18 @@ function updateNavbar() {
 /* ─────────────────────────────────────────
    AUTH
 ──────────────────────────────────────── */
-function enterApp(user, token) {
+function setTokens(token, refreshToken) {
   state.token = token;
-  state.user = user;
   localStorage.setItem('su_token', token);
+  if (refreshToken) {
+    state.refreshToken = refreshToken;
+    localStorage.setItem('su_refresh', refreshToken);
+  }
+}
+
+function enterApp(user, token, refreshToken) {
+  setTokens(token, refreshToken);
+  state.user = user;
   localStorage.setItem('su_user', JSON.stringify(user));
 
   /* update sidebar */
@@ -172,12 +204,19 @@ function enterApp(user, token) {
 
 async function logout(callApi = true) {
   if (callApi && state.token) {
-    try { await apiFetch('/auth/logout', { method: 'POST' }); } catch(e) {}
+    try {
+      await apiFetch('/auth/logout', {
+        method: 'POST',
+        body: JSON.stringify({ refresh_token: state.refreshToken || '' })
+      });
+    } catch(e) {}
   }
   
   localStorage.removeItem('su_token');
+  localStorage.removeItem('su_refresh');
   localStorage.removeItem('su_user');
   state.token = null;
+  state.refreshToken = null;
   state.user  = null;
   $('view-app').classList.add('hidden');
   $('view-login').classList.remove('hidden');
@@ -202,9 +241,9 @@ $('form-login').addEventListener('submit', async e => {
       method: 'POST',
       body: JSON.stringify({ email, password })
     });
-    // Response wrapper has { data: { token, user } }
-    const { token, user } = res.data;
-    enterApp(user, token);
+    // Response wrapper has { data: { token, refresh_token, user } }
+    const { token, refresh_token, user } = res.data;
+    enterApp(user, token, refresh_token);
     showToast(`Signed in as ${user.first_name}`);
   } catch (err) {
     const errEl = $('auth-error');

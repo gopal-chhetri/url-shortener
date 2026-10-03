@@ -57,7 +57,7 @@ func TestIsValidSlug(t *testing.T) {
 		assert.True(t, IsValidSlug(s), "%q should be a valid slug", s)
 	}
 
-	invalid := []string{"has space", "has/slash", "café", "héllo", "emoji🙂", ""}
+	invalid := []string{"has space", "has/slash", "café", "héllo", "emoji🙂", "", "abcdefghijklmnopqrstu", "api", "Healthz", "swagger"}
 	for _, s := range invalid {
 		assert.False(t, IsValidSlug(s), "%q should be an invalid slug", s)
 	}

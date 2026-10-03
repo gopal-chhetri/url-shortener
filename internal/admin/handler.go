@@ -245,9 +245,7 @@ func (h *AdminHandler) UpdateUserStatus(c *gin.Context) {
 		return
 	}
 
-	// Re-fetch user role name for the response
-	roleName := "user" // Default after status update, role doesn't change
-	response.SuccessResponse(c, toUserResponse(user, roleName))
+	response.SuccessResponse(c, toUserResponse(user, h.roleName(c, user)))
 }
 
 // GetRoles godoc
@@ -460,4 +458,18 @@ func (h *AdminHandler) DeleteURL(c *gin.Context) {
 	}
 
 	response.SuccessResponse(c, gin.H{"message": "URL deleted"})
+}
+
+// roleName resolves a user's role ID to its name, defaulting to "user".
+func (h *AdminHandler) roleName(c *gin.Context, user dbgen.User) string {
+	roles, err := h.service.ListRoles(c.Request.Context())
+	if err != nil {
+		infra.LogError(h.logger, "Failed to list roles", err)
+	}
+	for _, r := range roles {
+		if r.ID == user.RoleID {
+			return r.Name
+		}
+	}
+	return "user"
 }

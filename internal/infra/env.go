@@ -1,10 +1,10 @@
 package infra
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -59,6 +59,17 @@ func (e *Env) loadFromEnvironment() {
 	e.RedisPassword = getEnv("REDIS_PASSWORD")
 	e.RedisDB = getIntEnv("REDIS_DB")
 
+	if e.AccessTokenExpiryMinute <= 0 {
+		e.AccessTokenExpiryMinute = 15
+	}
+	if e.RefreshTokenExpiryMinute <= 0 {
+		e.RefreshTokenExpiryMinute = 7 * 24 * 60
+	}
+	// An empty HMAC secret would let anyone forge valid tokens.
+	if e.AccessTokenSecret == "" || e.RefreshTokenSecret == "" {
+		log.Fatal("ACCESS_TOKEN_SECRET and REFRESH_TOKEN_SECRET must be set")
+	}
+
 	e.AnonURLLimit = getIntEnv("ANON_URL_LIMIT")
 	if e.AnonURLLimit <= 0 {
 		e.AnonURLLimit = 3
@@ -67,6 +78,12 @@ func (e *Env) loadFromEnvironment() {
 	if e.AnonURLWindowHours <= 0 {
 		e.AnonURLWindowHours = 24
 	}
+}
+
+// IsLocal reports whether the app runs in local development. Anything else
+// is treated as production so a missing or unexpected APP_ENV fails safe.
+func (e *Env) IsLocal() bool {
+	return strings.EqualFold(e.AppEnv, "LOCAL") || strings.EqualFold(e.AppEnv, "DEV")
 }
 
 func getEnv(envName string) string {
@@ -79,7 +96,6 @@ func getEnv(envName string) string {
 
 func getIntEnv(envName string) int {
 	envValue, exists := os.LookupEnv(envName)
-	fmt.Println(envName, envValue)
 	if !exists || envValue == "" {
 		log.Printf("Env variable %s not found", envName)
 	}

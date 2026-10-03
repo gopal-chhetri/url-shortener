@@ -146,7 +146,24 @@ The app will be available at `http://localhost:8080`.
 
 ## Environment Variables
 
-Copy `deployments/local-dev/.env.sample` to `deployments/local-dev/.env` and configure:
+Copy `deployments/local-dev/.env.sample` to `deployments/local-dev/.env` and configure the following variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DB_NAME` | PostgreSQL Database name | `url-shortener` |
+| `DB_HOST` | PostgreSQL Hostname | `db` |
+| `DB_PORT` | PostgreSQL Port | `5432` |
+| `DB_USER` | PostgreSQL Username | `postgres` |
+| `DB_PASS` | PostgreSQL Password | `password` |
+| `APP_ENV` | Application environment (`LOCAL`, `PRODUCTION`) | `LOCAL` |
+| `BASE_URL` | Base URL of the shortener service | `http://localhost:8080` |
+| `PORT` | Go API server port | `8080` |
+| `ACCESS_TOKEN_SECRET` | Secret key for JWT access tokens | *(Generate a secure random string)* |
+| `REFRESH_TOKEN_SECRET` | Secret key for JWT refresh tokens | *(Generate a secure random string)* |
+| `REDIS_HOST` | Redis hostname | `redis` |
+| `REDIS_PORT` | Redis port | `6379` |
+| `ANON_URL_LIMIT` | Daily URL creation limit for anonymous users | `3` |
+| `ANON_URL_WINDOW_HOURS` | Sliding window in hours for anonymous rate limit | `24` |
 
 ## API Documentation
 
@@ -159,11 +176,20 @@ Once running, visit:
 |--------|------|-------------|------|
 | POST | `/api/v1/auth/register` | Register new user | No |
 | POST | `/api/v1/auth/login` | Login | No |
+| POST | `/api/v1/auth/refresh` | Swap a refresh token for a new token pair (old one is revoked) | Refresh token |
+| POST | `/api/v1/auth/logout` | Revoke the access token and, if sent, the refresh token | Yes |
+| POST | `/api/v1/shorten` | Create short URL without an account (quota-limited, expires) | No |
 | POST | `/api/v1/urls` | Create short URL | Yes |
 | GET | `/:code` | Redirect to original URL | No |
-| GET | `/api/v1/urls` | List user's URLs | Yes |
+| GET | `/api/v1/urls` | List user's URLs (`?sort=date\|clicks`) | Yes |
+| GET | `/api/v1/urls/:id` | Get one of the user's URLs | Yes |
+| PUT | `/api/v1/urls/:id` | Change the destination URL | Yes |
+| PATCH | `/api/v1/urls/:id/status` | Activate or deactivate URL | Yes |
 | DELETE | `/api/v1/urls/:id` | Deactivate URL | Yes |
 | GET | `/api/v1/urls/:id/analytics` | Get URL analytics | Yes |
+| GET/PUT/DELETE | `/api/v1/admin/...` | Users, roles, URLs and stats | Admin |
+
+Short links must point to `http`/`https` URLs (max 500 characters). Custom slugs are up to 20 letters, digits, `-` or `_`; a slug that is already taken returns `409 Conflict`.
 
 ### CI/CD Pipeline
 
@@ -183,7 +209,7 @@ Push to `main` triggers:
 - [ ] Add unit and integration test coverage for core redirection flows.
 - [ ] Migrate infrastructure from Docker Compose to **Kubernetes** to allow horizontal scaling of the Go API instances.
 - [ ] Grafana and Prometheus setup for monitoring.
-- [ ] Implement geo-location tracking for click analytics.
+- [x] Implement geo-location tracking for click analytics.
 
 ## License
 

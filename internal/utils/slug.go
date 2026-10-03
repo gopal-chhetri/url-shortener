@@ -127,8 +127,17 @@ func IsBase62(str string) bool {
 
 // IsValidSlug checks if a string is a valid custom slug: base62 characters
 // plus hyphens and underscores.
+// MaxSlugLength matches the urls.short_url VARCHAR(20) column.
+const MaxSlugLength = 20
+
+// reservedSlugs are top-level paths served by the app itself; a short link
+// with one of these codes would be shadowed and never redirect.
+var reservedSlugs = map[string]bool{
+	"api": true, "app": true, "health": true, "healthz": true, "swagger": true,
+}
+
 func IsValidSlug(str string) bool {
-	if str == "" {
+	if str == "" || len(str) > MaxSlugLength || reservedSlugs[strings.ToLower(str)] {
 		return false
 	}
 	for _, char := range str {

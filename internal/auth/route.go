@@ -5,12 +5,12 @@ import (
 	"github.com/gopal-chhetri/url-shortener/internal/bootstrap"
 )
 
-func SetupAuthRoute(app *bootstrap.Application, authGroup, authProtected *gin.RouterGroup) {
-	authRepository := NewUserRepository(app.Database)
-	authService := NewAuthService(authRepository, app.Env, app.Logger)
+func SetupAuthRoute(app *bootstrap.Application, authService AuthServiceInterface, authGroup, authProtected *gin.RouterGroup) {
 	authHandler := NewAuthHandler(authService, app.Logger)
 	authGroup.POST("/login", authHandler.Login)
 	authGroup.POST("/register", authHandler.Register)
+	// Refresh authenticates with the refresh token in the body, so it must not
+	// require a (possibly expired) access token.
+	authGroup.POST("/refresh", authHandler.RefreshToken)
 	authProtected.POST("/logout", authHandler.Logout)
-	authProtected.POST("/refresh", authHandler.RefreshToken)
 }

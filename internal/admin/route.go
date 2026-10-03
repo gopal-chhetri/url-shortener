@@ -9,19 +9,20 @@ import (
 
 func SetupAdminRoutes(app *bootstrap.Application, adminGroup *gin.RouterGroup, enforcer *casbin.Enforcer) {
 	repo := NewAdminRepository(app.Database)
-	service := NewAdminService(repo, app.Logger)
+	service := NewAdminService(repo, app.Redis, app.Logger)
 	handler := NewAdminHandler(service, app.Logger, app.Env)
 
-	// Apply Casbin middleware - all admin routes require 'admin' role
+	// Casbin RBAC: every admin route requires a matching policy for the caller's role
 	authMiddleware := middleware.NewAuthMiddleware(nil, enforcer)
-	adminGroup.Use(authMiddleware.CasbinMiddleware())
+	read := authMiddleware.RBACMiddleware("admin", "read")
+	write := authMiddleware.RBACMiddleware("admin", "write")
 
-	adminGroup.GET("/stats", handler.GetStats)
-	adminGroup.GET("/roles", handler.GetRoles)
-	adminGroup.GET("/users", handler.ListUsers)
-	adminGroup.PUT("/users/:id/role", handler.UpdateUserRole)
-	adminGroup.PUT("/users/:id/status", handler.UpdateUserStatus)
-	adminGroup.GET("/urls", handler.ListURLs)
-	adminGroup.PUT("/urls/:id/status", handler.UpdateURLStatus)
-	adminGroup.DELETE("/urls/:id", handler.DeleteURL)
+	adminGroup.GET("/stats", read, handler.GetStats)
+	adminGroup.GET("/roles", read, handler.GetRoles)
+	adminGroup.GET("/users", read, handler.ListUsers)
+	adminGroup.PUT("/users/:id/role", write, handler.UpdateUserRole)
+	adminGroup.PUT("/users/:id/status", write, handler.UpdateUserStatus)
+	adminGroup.GET("/urls", read, handler.ListURLs)
+	adminGroup.PUT("/urls/:id/status", write, handler.UpdateURLStatus)
+	adminGroup.DELETE("/urls/:id", write, handler.DeleteURL)
 }

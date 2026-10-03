@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
-	"github.com/gopal-chhetri/url-shortener/internal/db/sqlc"
+	dbgen "github.com/gopal-chhetri/url-shortener/internal/db/sqlc"
 	"github.com/gopal-chhetri/url-shortener/internal/infra"
 	"github.com/gopal-chhetri/url-shortener/internal/response"
 	"github.com/gopal-chhetri/url-shortener/internal/utils"
@@ -103,7 +103,7 @@ func TestGenerateToken(t *testing.T) {
 	}
 
 	userID := uuid.New()
-	token, err := svc.generateToken(userID, "test@example.com", "user", "test-secret", 60)
+	token, err := svc.generateToken(userID, "test@example.com", "user", TokenTypeAccess, "test-secret", 60)
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, token)
@@ -117,7 +117,7 @@ func TestValidateToken_Valid(t *testing.T) {
 	}
 
 	userID := uuid.New()
-	token, err := svc.generateToken(userID, "test@example.com", "user", env.AccessTokenSecret, 60)
+	token, err := svc.generateToken(userID, "test@example.com", "user", TokenTypeAccess, env.AccessTokenSecret, 60)
 	require.NoError(t, err)
 
 	claims, err := svc.ValidateToken(token)
@@ -269,61 +269,133 @@ func TestLogin_WrongPassword(t *testing.T) {
 	assert.True(t, errors.As(err, &appErr))
 }
 
-func TestRefreshToken_Success(t *testing.T) {
-	userID := uuid.New()
-	roleID := uuid.New()
+// memTokenStore is an in-memory TokenStore for tests.
+type memTokenStore struct {
+	revoked map[string]bool
+	roles   map[string]string
+}
 
-	mockRepo := &mockUserRepository{
+func newMemTokenStore() *memTokenStore {
+	return &memTokenStore{revoked: map[string]bool{}, roles: map[string]string{}}
+}
+
+func (m *memTokenStore) Revoke(_ context.Context, jti string, _ time.Time) error {
+	m.revoked[jti] = true
+	return nil
+}
+
+func (m *memTokenStore) IsRevoked(_ context.Context, jti string) (bool, error) {
+	return m.revoked[jti], nil
+}
+
+func (m *memTokenStore) CachedRole(_ context.Context, userID string) (string, bool) {
+	r, ok := m.roles[userID]
+	return r, ok
+}
+
+func (m *memTokenStore) CacheRole(_ context.Context, userID, role string) {
+	m.roles[userID] = role
+}
+
+// newRefreshTestService returns a service whose single user is active until
+// *active is set to false.
+func newRefreshTestService(userID uuid.UUID, active *bool) *AuthService {
+	repo := &mockUserRepository{
 		getUserByIDFn: func(ctx context.Context, dto GetUserDTO) (dbgen.User, error) {
-			return dbgen.User{
-				ID:        userID,
-				Email:     "test@example.com",
-				FirstName: "Test",
-				LastName:  "User",
-				RoleID:    roleID,
-			}, nil
+			if !*active {
+				return dbgen.User{}, response.NotFoundError{Model: "user"}
+			}
+			return dbgen.User{ID: userID, Email: "test@example.com", RoleID: uuid.New()}, nil
 		},
 		getRoleNameByIDFn: func(ctx context.Context, id uuid.UUID) (string, error) {
 			return "admin", nil
 		},
 	}
-
-	svc := &AuthService{
-		userRepo: mockRepo,
-		env:      newTestEnv(),
-		logger:   newTestLogger(),
-	}
-
-	token, err := svc.RefreshToken(context.Background(), userID)
-
-	assert.NoError(t, err)
-	assert.NotEmpty(t, token)
-
-	claims, err := svc.ValidateToken(token)
-	assert.NoError(t, err)
-	assert.Equal(t, "admin", claims.Role)
+	return &AuthService{userRepo: repo, store: newMemTokenStore(), env: newTestEnv(), logger: newTestLogger()}
 }
 
-func TestRefreshToken_UserNotFound(t *testing.T) {
-	mockRepo := &mockUserRepository{
-		getUserByIDFn: func(ctx context.Context, dto GetUserDTO) (dbgen.User, error) {
-			return dbgen.User{}, errors.New("not found")
-		},
-	}
+func TestRefresh_RotatesTokens(t *testing.T) {
+	userID := uuid.New()
+	active := true
+	svc := newRefreshTestService(userID, &active)
+	ctx := context.Background()
 
-	svc := &AuthService{
-		userRepo: mockRepo,
-		env:      newTestEnv(),
-		logger:   newTestLogger(),
-	}
+	refresh, err := svc.generateToken(userID, "test@example.com", "user", TokenTypeRefresh, svc.env.RefreshTokenSecret, 60)
+	require.NoError(t, err)
 
-	token, err := svc.RefreshToken(context.Background(), uuid.New())
+	tokens, err := svc.Refresh(ctx, refresh)
+	require.NoError(t, err)
+	claims, err := svc.Authenticate(ctx, tokens.Token)
+	require.NoError(t, err)
+	assert.Equal(t, "admin", claims.Role)
 
+	// The old refresh token was rotated out.
+	_, err = svc.Refresh(ctx, refresh)
+	var unauth response.UnauthorizedError
+	assert.ErrorAs(t, err, &unauth)
+
+	// The new one works.
+	_, err = svc.Refresh(ctx, tokens.RefreshToken)
+	assert.NoError(t, err)
+}
+
+func TestRefresh_RejectsAccessToken(t *testing.T) {
+	userID := uuid.New()
+	active := true
+	svc := newRefreshTestService(userID, &active)
+
+	access, err := svc.generateToken(userID, "test@example.com", "user", TokenTypeAccess, svc.env.AccessTokenSecret, 60)
+	require.NoError(t, err)
+
+	_, err = svc.Refresh(context.Background(), access)
+	var unauth response.UnauthorizedError
+	assert.ErrorAs(t, err, &unauth)
+}
+
+func TestAuthenticate_RejectsRefreshToken(t *testing.T) {
+	userID := uuid.New()
+	active := true
+	svc := newRefreshTestService(userID, &active)
+
+	refresh, err := svc.generateToken(userID, "test@example.com", "user", TokenTypeRefresh, svc.env.RefreshTokenSecret, 60)
+	require.NoError(t, err)
+
+	_, err = svc.Authenticate(context.Background(), refresh)
 	assert.Error(t, err)
-	assert.Empty(t, token)
+}
 
-	var appErr response.AppError
-	assert.True(t, errors.As(err, &appErr))
+func TestLogout_RevokesBothTokens(t *testing.T) {
+	userID := uuid.New()
+	active := true
+	svc := newRefreshTestService(userID, &active)
+	ctx := context.Background()
+
+	pair, err := svc.issueTokens(dbgen.User{ID: userID, Email: "test@example.com"}, "user")
+	require.NoError(t, err)
+	claims, err := svc.Authenticate(ctx, pair.Token)
+	require.NoError(t, err)
+
+	require.NoError(t, svc.Logout(ctx, claims, pair.RefreshToken))
+
+	_, err = svc.Authenticate(ctx, pair.Token)
+	assert.Error(t, err, "access token must be revoked")
+	_, err = svc.Refresh(ctx, pair.RefreshToken)
+	assert.Error(t, err, "refresh token must be revoked")
+}
+
+func TestAuthenticate_DeactivatedUser(t *testing.T) {
+	userID := uuid.New()
+	active := true
+	svc := newRefreshTestService(userID, &active)
+	ctx := context.Background()
+
+	access, err := svc.generateToken(userID, "test@example.com", "user", TokenTypeAccess, svc.env.AccessTokenSecret, 60)
+	require.NoError(t, err)
+
+	active = false
+	_, err = svc.Authenticate(ctx, access)
+	var unauth response.UnauthorizedError
+	assert.ErrorAs(t, err, &unauth)
 }
 
 func hashPassword(password string) (string, error) {

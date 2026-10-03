@@ -16,9 +16,16 @@ type RateLimiter struct {
 	maxRequests   int
 	windowSeconds int
 
-	// Fallback in-memory limiters
-	mu       sync.RWMutex
-	limiters map[string]*rate.Limiter
+	// Fallback in-memory limiters, swept of idle entries so the map cannot
+	// grow without bound.
+	mu        sync.Mutex
+	limiters  map[string]*memLimiter
+	lastSweep time.Time
+}
+
+type memLimiter struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
 }
 
 // NewRateLimiter creates a new RateLimiter instance
@@ -27,7 +34,7 @@ func NewRateLimiter(redis *redis.Client, maxRequests int, windowSeconds int) *Ra
 		redis:         redis,
 		maxRequests:   maxRequests,
 		windowSeconds: windowSeconds,
-		limiters:      make(map[string]*rate.Limiter),
+		limiters:      make(map[string]*memLimiter),
 	}
 }
 
@@ -35,14 +42,29 @@ func (rl *RateLimiter) getInMemoryLimiter(ip string) *rate.Limiter {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	limiter, exists := rl.limiters[ip]
+	now := time.Now()
+	window := time.Duration(rl.windowSeconds) * time.Second
+
+	// A limiter idle for a full window has refilled its bucket, so dropping
+	// it loses no state.
+	if now.Sub(rl.lastSweep) > window {
+		for key, entry := range rl.limiters {
+			if now.Sub(entry.lastSeen) > window {
+				delete(rl.limiters, key)
+			}
+		}
+		rl.lastSweep = now
+	}
+
+	entry, exists := rl.limiters[ip]
 	if !exists {
 		// Convert maxRequests in windowSeconds to limit per second
 		r := rate.Limit(float64(rl.maxRequests) / float64(rl.windowSeconds))
-		limiter = rate.NewLimiter(r, rl.maxRequests)
-		rl.limiters[ip] = limiter
+		entry = &memLimiter{limiter: rate.NewLimiter(r, rl.maxRequests)}
+		rl.limiters[ip] = entry
 	}
-	return limiter
+	entry.lastSeen = now
+	return entry.limiter
 }
 
 // Limit returns a Gin middleware for rate limiting

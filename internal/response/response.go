@@ -1,6 +1,7 @@
 package response
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -103,18 +104,25 @@ func ValidationErrorResponse(ctx *gin.Context, err error) {
 }
 
 func ErrorResponse(ctx *gin.Context, err error) {
-	switch err.(type) {
-	case InvalidOperation:
+	var (
+		invalidOp  InvalidOperation
+		denied     PermissionDeniedError
+		appErr     AppError
+		notFound   NotFoundError
+		duplicated DuplicateData
+		unauth     UnauthorizedError
+	)
+	switch {
+	case errors.As(err, &invalidOp), errors.As(err, &appErr):
 		NewHttpError(ctx, http.StatusBadRequest, err.Error())
-	case PermissionDeniedError:
+	case errors.As(err, &denied):
 		NewHttpError(ctx, http.StatusForbidden, err.Error())
-	case AppError:
-		NewHttpError(ctx, http.StatusBadRequest, err.Error())
-	case NotFoundError:
+	case errors.As(err, &notFound):
 		NotFoundResponse(ctx, err.Error())
-	case DuplicateData:
-		NewHttpError(ctx, http.StatusBadRequest, err.Error())
-
+	case errors.As(err, &duplicated):
+		NewHttpError(ctx, http.StatusConflict, err.Error())
+	case errors.As(err, &unauth):
+		NewHttpError(ctx, http.StatusUnauthorized, err.Error())
 	default:
 		ServerErrorResponse(ctx, err)
 	}

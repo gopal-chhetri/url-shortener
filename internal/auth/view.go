@@ -17,8 +17,9 @@ type LoginRequest struct {
 }
 
 type AuthResponse struct {
-	Token string       `json:"token"`
-	User  UserResponse `json:"user"`
+	Token        string       `json:"token"`
+	RefreshToken string       `json:"refresh_token"`
+	User         UserResponse `json:"user"`
 }
 
 type UserResponse struct {
@@ -29,13 +30,32 @@ type UserResponse struct {
 	Role      string `json:"role"`
 }
 
+// ClaimsContextKey is the gin context key holding the caller's *Claims.
+const ClaimsContextKey = "token_claims"
+
+// Token types carried in Claims.Type.
+const (
+	TokenTypeAccess  = "access"
+	TokenTypeRefresh = "refresh"
+)
+
 type Claims struct {
 	UserID string `json:"user_id"`
 	Email  string `json:"email"`
 	Role   string `json:"role"`
+	Type   string `json:"typ,omitempty"`
 	jwt.RegisteredClaims
 }
 
 type TokenResponse struct {
-	Token string `json:"token" example:"jwt_token_string"`
+	Token        string `json:"token" example:"jwt_token_string"`
+	RefreshToken string `json:"refresh_token" example:"refresh_token_string"`
+}
+
+type RefreshRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+type LogoutRequest struct {
+	RefreshToken string `json:"refresh_token"`
 }

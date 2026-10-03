@@ -37,3 +37,17 @@ func NewApplication() *Application {
 		GeoService: geoService,
 	}
 }
+
+// Close releases the application's external resources.
+func (a *Application) Close() {
+	if a.GeoService != nil {
+		_ = a.GeoService.Close()
+	}
+	if a.Redis != nil {
+		_ = a.Redis.Close()
+	}
+	if a.Database != nil {
+		a.Database.Close()
+	}
+	_ = a.Logger.Sync()
+}

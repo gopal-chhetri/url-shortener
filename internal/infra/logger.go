@@ -45,7 +45,7 @@ func NewLogger(env *Env) *zap.Logger {
 	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	config.DisableStacktrace = true
 
-	if env.AppEnv == "DEV" {
+	if env.IsLocal() {
 		config.Development = true
 		config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 	}

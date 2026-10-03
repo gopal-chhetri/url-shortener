@@ -69,14 +69,14 @@ type URLListResponse struct {
 // CreateURLRequest represents the request body for creating a URL
 // swagger:model
 type CreateURLRequestBody struct {
-	OriginalURL string `json:"original_url" binding:"required,url" example:"https://example.com/very-long-url"`
+	OriginalURL string `json:"original_url" binding:"required,url,max=500" example:"https://example.com/very-long-url"`
 	CustomSlug  string `json:"custom_slug,omitempty" example:"my-custom-slug"`
 }
 
 // UpdateURLRequestBody represents the request body for updating a URL
 // swagger:model
 type UpdateURLRequestBody struct {
-	OriginalURL string `json:"original_url" binding:"required,url" example:"https://example.com/new-url"`
+	OriginalURL string `json:"original_url" binding:"required,url,max=500" example:"https://example.com/new-url"`
 }
 
 // toURLResponse converts db URL model to response format
@@ -210,6 +210,7 @@ func (h *UrlHandler) CreateAnonymousURL(c *gin.Context) {
 	resp.ShortURL = h.buildFullShortURL(url.ShortUrl)
 	response.SuccessCreatedResponse(c, resp)
 }
+
 // @Summary Get URL by ID
 // @Description Get a specific URL by its ID
 // @Tags urls
@@ -237,14 +238,14 @@ func (h *UrlHandler) GetURLByID(c *gin.Context) {
 		return
 	}
 
-	// Check ownership
-	userIDStr := c.GetString("user_id")
-	if url.UserID.Valid && userIDStr != "" {
-		userID, _ := uuid.Parse(userIDStr)
-		if uuid.UUID(url.UserID.Bytes) != userID {
-			response.UnauthorizedResponse(c, "Unauthorized to access this URL")
-			return
-		}
+	userID, err := uuid.Parse(c.GetString("user_id"))
+	if err != nil {
+		response.UnauthorizedResponse(c, "Unauthorized")
+		return
+	}
+	if err := requireOwner(*url, userID); err != nil {
+		response.ErrorResponse(c, err)
+		return
 	}
 
 	resp := toURLResponse(*url)
@@ -281,18 +282,20 @@ func (h *UrlHandler) RedirectURL(c *gin.Context) {
 		return
 	}
 
-	go func() {
-		userAgent := c.GetHeader("User-Agent")
-		deviceInfo := utils.ParseUserAgent(userAgent)
-
-		var userID *uuid.UUID
-		if userIDStr := c.GetString("user_id"); userIDStr != "" {
-			if id, err := uuid.Parse(userIDStr); err == nil {
-				userID = &id
-			}
+	// Capture request data now: gin recycles *gin.Context once the handler
+	// returns, so the goroutine below must not touch c.
+	userAgent := c.GetHeader("User-Agent")
+	clientIP := c.ClientIP()
+	var userID *uuid.UUID
+	if userIDStr := c.GetString("user_id"); userIDStr != "" {
+		if id, err := uuid.Parse(userIDStr); err == nil {
+			userID = &id
 		}
+	}
+	trackCtx := context.WithoutCancel(c.Request.Context())
 
-		clientIP := c.ClientIP()
+	go func() {
+		deviceInfo := utils.ParseUserAgent(userAgent)
 		var ipAddress, country, city string
 
 		if h.geoService != nil {
@@ -304,7 +307,7 @@ func (h *UrlHandler) RedirectURL(c *gin.Context) {
 			}
 		}
 
-		if err := h.urlService.TrackClick(context.WithoutCancel(c.Request.Context()), url.ID, deviceInfo.Device, deviceInfo.Browser, userID, ipAddress, country, city); err != nil {
+		if err := h.urlService.TrackClick(trackCtx, url.ID, deviceInfo.Device, deviceInfo.Browser, userID, ipAddress, country, city); err != nil {
 			h.logger.Error("Failed to track click", zap.Error(err))
 		}
 	}()
@@ -312,8 +315,8 @@ func (h *UrlHandler) RedirectURL(c *gin.Context) {
 	h.logger.Info("URL redirected",
 		zap.String("short_code", code),
 		zap.String("original_url", url.OriginalUrl),
-		zap.String("user_agent", c.GetHeader("User-Agent")),
-		zap.String("ip", c.ClientIP()),
+		zap.String("user_agent", userAgent),
+		zap.String("ip", clientIP),
 	)
 
 	// Redirect to original URL

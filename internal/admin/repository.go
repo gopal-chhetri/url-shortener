@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 	dbgen "github.com/gopal-chhetri/url-shortener/internal/db/sqlc"
 	"github.com/gopal-chhetri/url-shortener/internal/response"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -35,7 +34,6 @@ type AdminRepositoryInterface interface {
 	CountAllURLsAdmin(ctx context.Context) (int64, error)
 	ListURLsByClicks(ctx context.Context, limit, offset int32) ([]dbgen.ListURLsByClicksRow, error)
 	GetClickCountsByURLIDs(ctx context.Context, urlIDs []uuid.UUID) (map[uuid.UUID]int64, error)
-	DeleteURL(ctx context.Context, urlID uuid.UUID) error
 
 	// Click stats
 	CountAllClicks(ctx context.Context) (int64, error)
@@ -53,22 +51,12 @@ func NewAdminRepository(pool *pgxpool.Pool) AdminRepositoryInterface {
 	}
 }
 
-func translateError(err error, model string) error {
-	if err == nil {
-		return nil
-	}
-	if err == pgx.ErrNoRows {
-		return response.NotFoundError{Model: model}
-	}
-	return err
-}
-
 func (r *AdminRepository) ListAllUsers(ctx context.Context, limit, offset int32) ([]dbgen.User, error) {
 	users, err := r.queries.ListAllUsers(ctx, dbgen.ListAllUsersParams{
 		Limit:  limit,
 		Offset: offset,
 	})
-	return users, translateError(err, "user")
+	return users, response.TranslateDBError(err, "user")
 }
 
 func (r *AdminRepository) CountAllUsers(ctx context.Context) (int64, error) {
@@ -81,7 +69,7 @@ func (r *AdminRepository) GetUsersByIDs(ctx context.Context, userIDs []uuid.UUID
 	}
 
 	users, err := r.queries.GetUsersByIDs(ctx, userIDs)
-	return users, translateError(err, "user")
+	return users, response.TranslateDBError(err, "user")
 }
 
 func (r *AdminRepository) UpdateUserRole(ctx context.Context, userID uuid.UUID, roleID uuid.UUID) (dbgen.User, error) {
@@ -89,7 +77,7 @@ func (r *AdminRepository) UpdateUserRole(ctx context.Context, userID uuid.UUID, 
 		ID:     userID,
 		RoleID: roleID,
 	})
-	return user, translateError(err, "user")
+	return user, response.TranslateDBError(err, "user")
 }
 
 func (r *AdminRepository) UpdateUserStatus(ctx context.Context, userID uuid.UUID, isActive bool) (dbgen.User, error) {
@@ -97,12 +85,12 @@ func (r *AdminRepository) UpdateUserStatus(ctx context.Context, userID uuid.UUID
 		ID:       userID,
 		IsActive: pgtype.Bool{Bool: isActive, Valid: true},
 	})
-	return user, translateError(err, "user")
+	return user, response.TranslateDBError(err, "user")
 }
 
 func (r *AdminRepository) GetRoleByName(ctx context.Context, name string) (dbgen.Role, error) {
 	role, err := r.queries.GetRoleByName(ctx, name)
-	return role, translateError(err, "role")
+	return role, response.TranslateDBError(err, "role")
 }
 
 func (r *AdminRepository) ListRoles(ctx context.Context) ([]dbgen.Role, error) {
@@ -117,7 +105,7 @@ func (r *AdminRepository) ListAllURLs(ctx context.Context, limit, offset int32) 
 		Limit:  limit,
 		Offset: offset,
 	})
-	return urls, translateError(err, "url")
+	return urls, response.TranslateDBError(err, "url")
 }
 
 func (r *AdminRepository) CountAllURLs(ctx context.Context) (int64, error) {
@@ -141,7 +129,7 @@ func (r *AdminRepository) UpdateURLStatus(ctx context.Context, urlID uuid.UUID, 
 		ID:       urlID,
 		IsActive: pgtype.Bool{Bool: isActive, Valid: true},
 	})
-	return url, translateError(err, "url")
+	return url, response.TranslateDBError(err, "url")
 }
 
 func (r *AdminRepository) CountAllClicks(ctx context.Context) (int64, error) {
@@ -154,7 +142,7 @@ func (r *AdminRepository) SearchURLs(ctx context.Context, search string, limit, 
 		Limit:    limit,
 		Offset:   offset,
 	})
-	return urls, translateError(err, "url")
+	return urls, response.TranslateDBError(err, "url")
 }
 
 func (r *AdminRepository) CountSearchURLs(ctx context.Context, search string) (int64, error) {
@@ -166,7 +154,7 @@ func (r *AdminRepository) ListAllURLsAdminByName(ctx context.Context, limit, off
 		Limit:  limit,
 		Offset: offset,
 	})
-	return urls, translateError(err, "url")
+	return urls, response.TranslateDBError(err, "url")
 }
 
 func (r *AdminRepository) GetClickCountsByURLIDs(ctx context.Context, urlIDs []uuid.UUID) (map[uuid.UUID]int64, error) {
@@ -186,17 +174,12 @@ func (r *AdminRepository) GetClickCountsByURLIDs(ctx context.Context, urlIDs []u
 	return counts, nil
 }
 
-func (r *AdminRepository) DeleteURL(ctx context.Context, urlID uuid.UUID) error {
-	err := r.queries.DeleteURL(ctx, urlID)
-	return translateError(err, "url")
-}
-
 func (r *AdminRepository) ListAllURLsAdmin(ctx context.Context, limit, offset int32) ([]dbgen.Url, error) {
 	urls, err := r.queries.ListAllURLsAdmin(ctx, dbgen.ListAllURLsAdminParams{
 		Limit:  limit,
 		Offset: offset,
 	})
-	return urls, translateError(err, "url")
+	return urls, response.TranslateDBError(err, "url")
 }
 
 func (r *AdminRepository) CountAllURLsAdmin(ctx context.Context) (int64, error) {
@@ -208,5 +191,5 @@ func (r *AdminRepository) ListURLsByClicks(ctx context.Context, limit, offset in
 		Limit:  limit,
 		Offset: offset,
 	})
-	return urls, translateError(err, "url")
+	return urls, response.TranslateDBError(err, "url")
 }

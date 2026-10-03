@@ -191,7 +191,7 @@ SELECT
 FROM clicks 
 WHERE url_id = $1 AND created_at BETWEEN $2 AND $3
 GROUP BY DATE(created_at)
-ORDER BY date DESC
+ORDER BY date ASC
 `
 
 type GetClickStatsByDateRangeParams struct {

@@ -2,9 +2,11 @@ package url
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	dbgen "github.com/gopal-chhetri/url-shortener/internal/db/sqlc"
+	"github.com/gopal-chhetri/url-shortener/internal/response"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -47,7 +49,7 @@ type ClickRepositoryInterface interface {
 	GetDeviceStatsByURLID(ctx context.Context, urlID uuid.UUID) ([]dbgen.GetDeviceStatsByURLIDRow, error)
 	GetBrowserStatsByURLID(ctx context.Context, urlID uuid.UUID) ([]dbgen.GetBrowserStatsByURLIDRow, error)
 	GetGeoStatsByURLID(ctx context.Context, urlID uuid.UUID) ([]dbgen.GetGeoStatsByURLIDRow, error)
-	GetClicksByDateRange(ctx context.Context, urlID uuid.UUID, start, end string) ([]dbgen.GetClickStatsByDateRangeRow, error)
+	GetClicksByDateRange(ctx context.Context, urlID uuid.UUID, start, end time.Time) ([]dbgen.GetClickStatsByDateRangeRow, error)
 }
 
 type ClickRepository struct {
@@ -112,7 +114,7 @@ func (r *ClickRepository) CreateClick(ctx context.Context, dto CreateClickDTO) (
 		Longitude: longitude,
 	})
 
-	return click, translateError(err, "click")
+	return click, response.TranslateDBError(err, "click")
 }
 
 func (r *ClickRepository) GetClicksByURLID(ctx context.Context, dto GetClicksByURLDTO) ([]dbgen.Click, error) {
@@ -122,13 +124,13 @@ func (r *ClickRepository) GetClicksByURLID(ctx context.Context, dto GetClicksByU
 		Limit:  dto.Limit,
 		Offset: dto.Offset,
 	})
-	return clicks, translateError(err, "click")
+	return clicks, response.TranslateDBError(err, "click")
 }
 
 func (r *ClickRepository) GetClickCountByURLID(ctx context.Context, urlID uuid.UUID) (int64, error) {
 	querier := r.getQuerier(nil)
 	count, err := querier.GetClickCountByURLID(ctx, pgtype.UUID{Bytes: urlID, Valid: true})
-	return count, translateError(err, "click")
+	return count, response.TranslateDBError(err, "click")
 }
 
 func (r *ClickRepository) GetClicksByUserID(ctx context.Context, dto GetClicksByUserDTO) ([]dbgen.Click, error) {
@@ -138,43 +140,45 @@ func (r *ClickRepository) GetClicksByUserID(ctx context.Context, dto GetClicksBy
 		Limit:  dto.Limit,
 		Offset: dto.Offset,
 	})
-	return clicks, translateError(err, "click")
+	return clicks, response.TranslateDBError(err, "click")
 }
 
 func (r *ClickRepository) GetClickCountByUserID(ctx context.Context, userID uuid.UUID) (int64, error) {
 	querier := r.getQuerier(nil)
 	count, err := querier.GetClickCountByUserID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
-	return count, translateError(err, "click")
+	return count, response.TranslateDBError(err, "click")
 }
 
 func (r *ClickRepository) GetClickStatsByURLID(ctx context.Context, urlID uuid.UUID) (dbgen.GetClickStatsByURLIDRow, error) {
 	querier := r.getQuerier(nil)
 	stats, err := querier.GetClickStatsByURLID(ctx, pgtype.UUID{Bytes: urlID, Valid: true})
-	return stats, translateError(err, "click")
+	return stats, response.TranslateDBError(err, "click")
 }
 
 func (r *ClickRepository) GetDeviceStatsByURLID(ctx context.Context, urlID uuid.UUID) ([]dbgen.GetDeviceStatsByURLIDRow, error) {
 	querier := r.getQuerier(nil)
 	stats, err := querier.GetDeviceStatsByURLID(ctx, pgtype.UUID{Bytes: urlID, Valid: true})
-	return stats, translateError(err, "click")
+	return stats, response.TranslateDBError(err, "click")
 }
 
 func (r *ClickRepository) GetBrowserStatsByURLID(ctx context.Context, urlID uuid.UUID) ([]dbgen.GetBrowserStatsByURLIDRow, error) {
 	querier := r.getQuerier(nil)
 	stats, err := querier.GetBrowserStatsByURLID(ctx, pgtype.UUID{Bytes: urlID, Valid: true})
-	return stats, translateError(err, "click")
+	return stats, response.TranslateDBError(err, "click")
 }
 
 func (r *ClickRepository) GetGeoStatsByURLID(ctx context.Context, urlID uuid.UUID) ([]dbgen.GetGeoStatsByURLIDRow, error) {
 	querier := r.getQuerier(nil)
 	stats, err := querier.GetGeoStatsByURLID(ctx, pgtype.UUID{Bytes: urlID, Valid: true})
-	return stats, translateError(err, "click")
+	return stats, response.TranslateDBError(err, "click")
 }
 
-func (r *ClickRepository) GetClicksByDateRange(ctx context.Context, urlID uuid.UUID, start, end string) ([]dbgen.GetClickStatsByDateRangeRow, error) {
+func (r *ClickRepository) GetClicksByDateRange(ctx context.Context, urlID uuid.UUID, start, end time.Time) ([]dbgen.GetClickStatsByDateRangeRow, error) {
 	querier := r.getQuerier(nil)
 	stats, err := querier.GetClickStatsByDateRange(ctx, dbgen.GetClickStatsByDateRangeParams{
-		UrlID: pgtype.UUID{Bytes: urlID, Valid: true},
+		UrlID:       pgtype.UUID{Bytes: urlID, Valid: true},
+		CreatedAt:   pgtype.Timestamptz{Time: start, Valid: true},
+		CreatedAt_2: pgtype.Timestamptz{Time: end, Valid: true},
 	})
-	return stats, translateError(err, "click")
+	return stats, response.TranslateDBError(err, "click")
 }

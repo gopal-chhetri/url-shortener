@@ -2,7 +2,6 @@ package auth
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/gopal-chhetri/url-shortener/internal/infra"
 	"github.com/gopal-chhetri/url-shortener/internal/response"
 	"go.uber.org/zap"
@@ -87,30 +86,28 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 // Logout godoc
 // @Summary Logout user
-// @Description Logout user
+// @Description Revoke the current access token and, if given, the refresh token
 // @Tags auth
 // @Accept json
 // @Produce json
 // @Security BearerAuth
+// @Param request body LogoutRequest false "Refresh token to revoke"
 // @Success 200 {object} response.Response
 // @Failure 401 {object} response.Response
 // @Router /auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
-	userID := c.GetString("user_id")
-	if userID == "" {
+	raw, ok := c.Get(ClaimsContextKey)
+	claims, _ := raw.(*Claims)
+	if !ok || claims == nil {
 		response.UnauthorizedResponse(c, "Unauthorized")
 		return
 	}
 
-	userUUID, err := uuid.Parse(userID)
-	if err != nil {
-		infra.LogError(h.logger, "Invalid user ID", err)
-		response.UnauthorizedResponse(c, "Invalid token")
-		return
-	}
+	// The body is optional; a client may only hold the access token.
+	var req LogoutRequest
+	_ = c.ShouldBindJSON(&req)
 
-	err = h.authService.Logout(c.Request.Context(), userUUID)
-	if err != nil {
+	if err := h.authService.Logout(c.Request.Context(), claims, req.RefreshToken); err != nil {
 		infra.LogError(h.logger, "Logout failed", err)
 		response.ErrorResponse(c, err)
 		return
@@ -120,35 +117,28 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 }
 
 // RefreshToken godoc
-// @Summary Refresh JWT token
-// @Description Refresh JWT token for authenticated user
+// @Summary Refresh JWT tokens
+// @Description Exchange a refresh token for a new access/refresh token pair. The presented refresh token is revoked.
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Param request body RefreshRequest true "Refresh request"
 // @Success 200 {object} response.Response{data=TokenResponse}
 // @Failure 401 {object} response.Response
 // @Router /auth/refresh [post]
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
-	userID := c.GetString("user_id")
-	if userID == "" {
-		response.UnauthorizedResponse(c, "Unauthorized")
+	var req RefreshRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ValidationErrorResponse(c, err)
 		return
 	}
 
-	userUUID, err := uuid.Parse(userID)
-	if err != nil {
-		infra.LogError(h.logger, "Invalid user ID", err)
-		response.BadRequestResponse(c)
-		return
-	}
-
-	token, err := h.authService.RefreshToken(c.Request.Context(), userUUID)
+	tokens, err := h.authService.Refresh(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		infra.LogError(h.logger, "Token refresh failed", err)
 		response.ErrorResponse(c, err)
 		return
 	}
 
-	response.SuccessResponse(c, TokenResponse{Token: token})
+	response.SuccessResponse(c, tokens)
 }

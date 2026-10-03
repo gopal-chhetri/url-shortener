@@ -25,16 +25,13 @@ SELECT * FROM urls WHERE user_id = $1 ORDER BY is_active DESC, created_at DESC L
 SELECT COUNT(*) FROM urls WHERE user_id = $1;
 
 -- name: ListAllURLs :many
-SELECT * FROM urls WHERE is_active = true LIMIT $1 OFFSET $2;
+SELECT * FROM urls WHERE is_active = true ORDER BY created_at DESC, id LIMIT $1 OFFSET $2;
 
 -- name: CountAllURLs :one
 SELECT COUNT(*) FROM urls WHERE is_active = true;
 
 -- name: ListAllURLsByDate :many
 SELECT * FROM urls WHERE is_active = true ORDER BY created_at DESC LIMIT $1 OFFSET $2;
-
--- name: CountAllURLsByDate :one
-SELECT COUNT(*) FROM urls WHERE is_active = true AND created_at BETWEEN $1 AND $2;
 
 -- name: UpdateURLStatus :one
 UPDATE urls SET is_active = $2, updated_at = NOW() WHERE id = $1 RETURNING *;
@@ -86,3 +83,13 @@ LEFT JOIN clicks c ON c.url_id = u.id
 GROUP BY u.id
 ORDER BY click_count DESC
 LIMIT $1 OFFSET $2;
+
+-- name: ListUserURLsByClicks :many
+SELECT u.id, u.short_url, u.original_url, u.user_id, u.is_active, u.created_at, u.updated_at, u.expires_at,
+    COUNT(c.id) AS click_count
+FROM urls u
+LEFT JOIN clicks c ON c.url_id = u.id
+WHERE u.user_id = $1
+GROUP BY u.id
+ORDER BY click_count DESC, u.created_at DESC
+LIMIT $2 OFFSET $3;

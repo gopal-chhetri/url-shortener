@@ -5,7 +5,9 @@ import (
 
 	"github.com/google/uuid"
 	dbgen "github.com/gopal-chhetri/url-shortener/internal/db/sqlc"
+	"github.com/gopal-chhetri/url-shortener/internal/infra"
 	"github.com/gopal-chhetri/url-shortener/internal/response"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -42,11 +44,34 @@ type DashboardStats struct {
 
 type AdminService struct {
 	repo   AdminRepositoryInterface
+	redis  *redis.Client
 	logger *zap.Logger
 }
 
-func NewAdminService(repo AdminRepositoryInterface, logger *zap.Logger) AdminServiceInterface {
-	return &AdminService{repo: repo, logger: logger}
+func NewAdminService(repo AdminRepositoryInterface, redis *redis.Client, logger *zap.Logger) AdminServiceInterface {
+	return &AdminService{repo: repo, redis: redis, logger: logger}
+}
+
+// invalidateUserAuth drops the user's cached status/role so a deactivation
+// or role change applies to their very next request.
+func (s *AdminService) invalidateUserAuth(ctx context.Context, userID uuid.UUID) {
+	if s.redis == nil {
+		return
+	}
+	if err := s.redis.Del(ctx, infra.UserAuthCacheKey(userID.String())).Err(); err != nil {
+		s.logger.Warn("Failed to invalidate user auth cache", zap.String("user_id", userID.String()), zap.Error(err))
+	}
+}
+
+// invalidateURL drops the cached redirect for url so status changes take
+// effect immediately rather than after the cache TTL.
+func (s *AdminService) invalidateURL(ctx context.Context, url dbgen.Url) {
+	if s.redis == nil {
+		return
+	}
+	if err := s.redis.Del(ctx, infra.URLCacheKey(url.ShortUrl)).Err(); err != nil {
+		s.logger.Warn("Failed to invalidate URL cache", zap.String("short_url", url.ShortUrl), zap.Error(err))
+	}
 }
 
 func (s *AdminService) GetDashboardStats(ctx context.Context) (*DashboardStats, error) {
@@ -152,6 +177,7 @@ func (s *AdminService) UpdateUserRole(ctx context.Context, userID uuid.UUID, rol
 		return dbgen.User{}, err
 	}
 
+	s.invalidateUserAuth(ctx, userID)
 	s.logger.Info("User role updated", zap.String("user_id", userID.String()), zap.String("role", roleName))
 	return user, nil
 }
@@ -163,6 +189,7 @@ func (s *AdminService) UpdateUserStatus(ctx context.Context, userID uuid.UUID, i
 		return dbgen.User{}, err
 	}
 
+	s.invalidateUserAuth(ctx, userID)
 	s.logger.Info("User status updated",
 		zap.String("user_id", userID.String()),
 		zap.Bool("is_active", isActive),
@@ -203,6 +230,7 @@ func (s *AdminService) UpdateURLStatus(ctx context.Context, urlID uuid.UUID, isA
 		s.logger.Error("Failed to update URL status", zap.Error(err))
 		return dbgen.Url{}, err
 	}
+	s.invalidateURL(ctx, url)
 
 	s.logger.Info("URL status updated",
 		zap.String("url_id", urlID.String()),
@@ -211,11 +239,14 @@ func (s *AdminService) UpdateURLStatus(ctx context.Context, urlID uuid.UUID, isA
 	return url, nil
 }
 
+// DeleteURL soft-deletes a URL (deactivates it).
 func (s *AdminService) DeleteURL(ctx context.Context, urlID uuid.UUID) error {
-	if err := s.repo.DeleteURL(ctx, urlID); err != nil {
+	url, err := s.repo.UpdateURLStatus(ctx, urlID, false)
+	if err != nil {
 		s.logger.Error("Failed to delete URL", zap.Error(err))
 		return err
 	}
+	s.invalidateURL(ctx, url)
 
 	s.logger.Info("URL deleted", zap.String("url_id", urlID.String()))
 	return nil

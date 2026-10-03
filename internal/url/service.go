@@ -3,7 +3,8 @@ package url
 import (
 	"context"
 	"encoding/json"
-	"sort"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,6 +16,8 @@ import (
 	"go.uber.org/zap"
 )
 
+// UrlServiceInterface defines the behavior of the URL shortener business logic service.
+// It supports URL creation, lookup, status updates, pagination, deletion, and analytics.
 type UrlServiceInterface interface {
 	CreateURL(ctx context.Context, dto CreateURLRequest) (*dbgen.Url, error)
 	GetURLByID(ctx context.Context, id uuid.UUID) (*dbgen.Url, error)
@@ -32,6 +35,7 @@ type UrlServiceInterface interface {
 	GetClickCountsByURLIDs(ctx context.Context, urlIDs []uuid.UUID) (map[uuid.UUID]int64, error)
 }
 
+// CreateURLRequest contains parameters for shortening a new URL.
 type CreateURLRequest struct {
 	OriginalURL string     `json:"original_url" binding:"required,url"`
 	CustomSlug  string     `json:"custom_slug,omitempty"`
@@ -39,12 +43,14 @@ type CreateURLRequest struct {
 	ExpiresAt   *time.Time `json:"-"`
 }
 
+// UpdateURLRequest contains details for updating the long URL or custom slug of an existing code.
 type UpdateURLRequest struct {
 	ID          uuid.UUID `json:"id" binding:"required"`
 	OriginalURL string    `json:"original_url" binding:"required,url"`
 	CustomSlug  string    `json:"custom_slug,omitempty"`
 }
 
+// UrlService provides implementation for UrlServiceInterface, managing URL lifecycle and analytics.
 type UrlService struct {
 	repo      UrlRepositoryInterface
 	clickRepo ClickRepositoryInterface
@@ -53,6 +59,7 @@ type UrlService struct {
 	logger    *zap.Logger
 }
 
+// NewUrlService initializes a basic UrlService instance with database, redis cache, environment, and logger.
 func NewUrlService(repo UrlRepositoryInterface, redis *redis.Client, env *infra.Env, logger *zap.Logger) UrlServiceInterface {
 	return &UrlService{
 		repo:   repo,
@@ -73,53 +80,83 @@ func NewUrlServiceWithClicks(repo UrlRepositoryInterface, clickRepo ClickReposit
 	}
 }
 
+// maxSlugAttempts bounds how many generated slugs CreateURL tries before
+// giving up on finding an unused one.
+const maxSlugAttempts = 5
+
 // CreateURL creates a new shortened URL
 func (s *UrlService) CreateURL(ctx context.Context, req CreateURLRequest) (*dbgen.Url, error) {
-	// Validate original URL
-	if req.OriginalURL == "" {
-		return nil, response.NewAppError("Original URL is required")
+	if !utils.IsHTTPURL(req.OriginalURL) {
+		return nil, response.NewAppError("Original URL must be an http or https URL")
 	}
 
-	// Generate or use custom slug
-	var shortURL string
-	if req.CustomSlug != "" {
-		// Validate custom slug
-		if !utils.IsValidSlug(req.CustomSlug) {
-			return nil, response.NewAppError("Custom slug may contain letters, numbers, hyphens, and underscores")
-		}
-		shortURL = req.CustomSlug
-	} else {
-		// Generate unique slug using timestamp
-		shortURL = utils.GenerateUniqueSlug(req.OriginalURL, time.Now().UnixNano(), 7)
-	}
-
-	// Check if slug already exists
-	_, err := s.repo.GetURLByShortURL(ctx, GetURLByShortURLDTO{ShortURL: shortURL})
-	if err == nil {
-		// Slug already exists, generate a new one with additional uniqueness
-		s.logger.Warn("Slug collision detected, regenerating", zap.String("slug", shortURL))
-		shortURL = utils.GenerateUniqueSlug(req.OriginalURL+uuid.New().String(), time.Now().UnixNano(), 7)
-	}
-
-	// Create URL in database
-	url, err := s.repo.CreateURL(ctx, CreateURLDTO{
+	dto := CreateURLDTO{
 		OriginalURL: req.OriginalURL,
-		ShortURL:    shortURL,
 		UserID:      req.UserID,
 		ExpiresAt:   req.ExpiresAt,
-	})
-	if err != nil {
-		s.logger.Error("Failed to create URL", zap.Error(err))
-		return nil, err
 	}
 
-	s.logger.Info("URL created successfully",
-		zap.String("short_url", shortURL),
-		zap.String("original_url", req.OriginalURL),
-		zap.Any("user_id", req.UserID),
-	)
+	// A requested custom slug is used as-is; if it's taken the caller gets a
+	// 409 rather than a silently different link.
+	if req.CustomSlug != "" {
+		if !utils.IsValidSlug(req.CustomSlug) {
+			return nil, response.NewAppError(fmt.Sprintf("Custom slug must be at most %d letters, numbers, hyphens, or underscores, and not a reserved word", utils.MaxSlugLength))
+		}
+		dto.ShortURL = req.CustomSlug
+		url, err := s.repo.CreateURL(ctx, dto)
+		if err != nil {
+			var dup response.DuplicateData
+			if errors.As(err, &dup) {
+				return nil, response.DuplicateData{Model: "custom slug"}
+			}
+			s.logger.Error("Failed to create URL", zap.Error(err))
+			return nil, err
+		}
+		s.logCreated(url)
+		return &url, nil
+	}
 
-	return &url, nil
+	// Generated slugs rely on the unique constraint instead of a racy
+	// pre-check: on collision, salt the input and try again.
+	for attempt := 0; attempt < maxSlugAttempts; attempt++ {
+		seed := req.OriginalURL
+		if attempt > 0 {
+			seed += uuid.New().String()
+		}
+		dto.ShortURL = utils.GenerateUniqueSlug(seed, time.Now().UnixNano(), 7)
+
+		url, err := s.repo.CreateURL(ctx, dto)
+		if err == nil {
+			s.logCreated(url)
+			return &url, nil
+		}
+		var dup response.DuplicateData
+		if !errors.As(err, &dup) {
+			s.logger.Error("Failed to create URL", zap.Error(err))
+			return nil, err
+		}
+		s.logger.Warn("Slug collision detected, regenerating", zap.String("slug", dto.ShortURL))
+	}
+	return nil, fmt.Errorf("could not generate a unique slug after %d attempts", maxSlugAttempts)
+}
+
+// logCreated records a successfully created URL.
+func (s *UrlService) logCreated(url dbgen.Url) {
+	s.logger.Info("URL created successfully",
+		zap.String("short_url", url.ShortUrl),
+		zap.String("original_url", url.OriginalUrl),
+		zap.Bool("anonymous", !url.UserID.Valid),
+	)
+}
+
+// requireOwner reports a not-found error unless userID owns url. Anonymous
+// (ownerless) URLs belong to nobody, so no account can modify them, and
+// non-owners can't distinguish someone else's URL from a missing one.
+func requireOwner(url dbgen.Url, userID uuid.UUID) error {
+	if !url.UserID.Valid || uuid.UUID(url.UserID.Bytes) != userID {
+		return response.NotFoundError{Model: "url"}
+	}
+	return nil
 }
 
 // GetURLByID retrieves a URL by its ID
@@ -135,7 +172,7 @@ func (s *UrlService) GetURLByID(ctx context.Context, id uuid.UUID) (*dbgen.Url, 
 
 // GetURLByShortURL retrieves a URL by its short code (for redirection)
 func (s *UrlService) GetURLByShortURL(ctx context.Context, shortURL string) (*dbgen.Url, error) {
-	key := "url:code:" + shortURL
+	key := infra.URLCacheKey(shortURL)
 	if s.redis != nil {
 		val, err := s.redis.Get(ctx, key).Result()
 		if err == nil {
@@ -172,6 +209,10 @@ func (s *UrlService) ExpireExpiredURLs(ctx context.Context) error {
 
 // UpdateURL updates a URL's details
 func (s *UrlService) UpdateURL(ctx context.Context, req UpdateURLRequest, userID uuid.UUID) (*dbgen.Url, error) {
+	if !utils.IsHTTPURL(req.OriginalURL) {
+		return nil, response.NewAppError("Original URL must be an http or https URL")
+	}
+
 	// First check if URL exists and belongs to user
 	existingURL, err := s.repo.GetURLByID(ctx, GetURLByIDDTO{ID: req.ID})
 	if err != nil {
@@ -179,13 +220,12 @@ func (s *UrlService) UpdateURL(ctx context.Context, req UpdateURLRequest, userID
 		return nil, err
 	}
 
-	// Check ownership
-	if existingURL.UserID.Valid && existingURL.UserID.Bytes != userID {
+	if err := requireOwner(existingURL, userID); err != nil {
 		s.logger.Warn("Unauthorized URL update attempt",
 			zap.String("url_id", req.ID.String()),
 			zap.String("user_id", userID.String()),
 		)
-		return nil, response.NewAppError("Unauthorized to update this URL")
+		return nil, err
 	}
 
 	// Update URL
@@ -201,7 +241,7 @@ func (s *UrlService) UpdateURL(ctx context.Context, req UpdateURLRequest, userID
 
 	// Invalidate cache
 	if s.redis != nil {
-		s.redis.Del(ctx, "url:code:"+existingURL.ShortUrl)
+		s.redis.Del(ctx, infra.URLCacheKey(existingURL.ShortUrl))
 	}
 
 	s.logger.Info("URL updated successfully",
@@ -221,13 +261,12 @@ func (s *UrlService) DeleteURL(ctx context.Context, id uuid.UUID, userID uuid.UU
 		return err
 	}
 
-	// Check ownership
-	if existingURL.UserID.Valid && existingURL.UserID.Bytes != userID {
+	if err := requireOwner(existingURL, userID); err != nil {
 		s.logger.Warn("Unauthorized URL deletion attempt",
 			zap.String("url_id", id.String()),
 			zap.String("user_id", userID.String()),
 		)
-		return response.NewAppError("Unauthorized to delete this URL")
+		return err
 	}
 
 	// Delete URL
@@ -238,7 +277,7 @@ func (s *UrlService) DeleteURL(ctx context.Context, id uuid.UUID, userID uuid.UU
 
 	// Invalidate cache
 	if s.redis != nil {
-		s.redis.Del(ctx, "url:code:"+existingURL.ShortUrl)
+		s.redis.Del(ctx, infra.URLCacheKey(existingURL.ShortUrl))
 	}
 
 	s.logger.Info("URL deleted successfully",
@@ -261,50 +300,17 @@ func (s *UrlService) ListURLs(ctx context.Context, userID uuid.UUID, limit, offs
 	var err error
 
 	if sortBy == "clicks" {
-		allURLs, err := s.repo.ListURLs(ctx, ListURLsDTO{
-			UserID: userID,
-			Limit:  1000,
-			Offset: 0,
-		})
-		if err != nil {
-			s.logger.Error("Failed to list URLs", zap.Error(err))
-			return nil, 0, err
-		}
-
-		urlIDs := make([]uuid.UUID, len(allURLs))
-		for i, u := range allURLs {
-			urlIDs[i] = u.ID
-		}
-
-		clickCounts, err := s.repo.GetClickCountsByURLIDs(ctx, urlIDs)
-		if err != nil {
-			s.logger.Error("Failed to get click counts", zap.Error(err))
-			clickCounts = make(map[uuid.UUID]int64)
-		}
-
-		sort.Slice(allURLs, func(i, j int) bool {
-			return clickCounts[allURLs[i].ID] > clickCounts[allURLs[j].ID]
-		})
-
-		start := offset
-		if start > int32(len(allURLs)) {
-			start = int32(len(allURLs))
-		}
-		end := start + limit
-		if end > int32(len(allURLs)) {
-			end = int32(len(allURLs))
-		}
-		urls = allURLs[start:end]
+		urls, err = s.repo.ListURLsByClicks(ctx, userID, limit, offset)
 	} else {
 		urls, err = s.repo.ListURLs(ctx, ListURLsDTO{
 			UserID: userID,
 			Limit:  limit,
 			Offset: offset,
 		})
-		if err != nil {
-			s.logger.Error("Failed to list URLs", zap.Error(err))
-			return nil, 0, err
-		}
+	}
+	if err != nil {
+		s.logger.Error("Failed to list URLs", zap.Error(err))
+		return nil, 0, err
 	}
 
 	count, err := s.repo.GetURLCount(ctx, GetURLCountDTO{UserID: userID})
@@ -424,8 +430,8 @@ func (s *UrlService) UpdateURLStatus(ctx context.Context, id uuid.UUID, userID u
 		return nil, err
 	}
 
-	if existing.UserID.Valid && existing.UserID.Bytes != userID {
-		return nil, response.NewAppError("Unauthorized to modify this URL")
+	if err := requireOwner(existing, userID); err != nil {
+		return nil, err
 	}
 
 	updated, err := s.repo.UpdateURLStatus(ctx, UpdateURLStatusDTO{ID: id, IsActive: isActive})
@@ -436,7 +442,7 @@ func (s *UrlService) UpdateURLStatus(ctx context.Context, id uuid.UUID, userID u
 
 	// Invalidate cache
 	if s.redis != nil {
-		s.redis.Del(ctx, "url:code:"+existing.ShortUrl)
+		s.redis.Del(ctx, infra.URLCacheKey(existing.ShortUrl))
 	}
 
 	return &updated, nil
@@ -453,8 +459,8 @@ func (s *UrlService) GetURLAnalytics(ctx context.Context, urlID uuid.UUID, userI
 	if err != nil {
 		return nil, err
 	}
-	if existing.UserID.Valid && existing.UserID.Bytes != userID {
-		return nil, response.NewAppError("Unauthorized")
+	if err := requireOwner(existing, userID); err != nil {
+		return nil, err
 	}
 
 	basicStats, err := s.clickRepo.GetClickStatsByURLID(ctx, urlID)
@@ -464,7 +470,7 @@ func (s *UrlService) GetURLAnalytics(ctx context.Context, urlID uuid.UUID, userI
 
 	end := time.Now()
 	start := end.AddDate(0, 0, -7)
-	dailyClicks, err := s.clickRepo.GetClicksByDateRange(ctx, urlID, start.Format(time.RFC3339), end.Format(time.RFC3339))
+	dailyClicks, err := s.clickRepo.GetClicksByDateRange(ctx, urlID, start, end)
 	if err != nil {
 		dailyClicks = nil
 	}

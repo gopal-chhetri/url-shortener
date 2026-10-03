@@ -78,16 +78,6 @@ func (r *UserRepository) getQuerier(tx pgx.Tx) *dbgen.Queries {
 	return r.queries
 }
 
-func translateError(err error, model string) error {
-	if err == nil {
-		return nil
-	}
-	if err == pgx.ErrNoRows {
-		return response.NotFoundError{Model: model}
-	}
-	return err
-}
-
 func (r *UserRepository) CreateUser(ctx context.Context, dto CreateUserDTO) (dbgen.User, error) {
 	querier := r.getQuerier(dto.Tx)
 	user, err := querier.CreateUser(ctx, dbgen.CreateUserParams{
@@ -96,19 +86,19 @@ func (r *UserRepository) CreateUser(ctx context.Context, dto CreateUserDTO) (dbg
 		FirstName:    dto.FirstName,
 		LastName:     dto.LastName,
 	})
-	return user, translateError(err, "user")
+	return user, response.TranslateDBError(err, "user")
 }
 
 func (r *UserRepository) GetUserByEmail(ctx context.Context, dto GetUserDTO) (dbgen.User, error) {
 	querier := r.getQuerier(dto.Tx)
 	user, err := querier.GetUserByEmail(ctx, *dto.Email)
-	return user, translateError(err, "user")
+	return user, response.TranslateDBError(err, "user")
 }
 
 func (r *UserRepository) GetUserByID(ctx context.Context, dto GetUserDTO) (dbgen.User, error) {
 	querier := r.getQuerier(dto.Tx)
 	user, err := querier.GetUserById(ctx, *dto.ID)
-	return user, translateError(err, "user")
+	return user, response.TranslateDBError(err, "user")
 }
 
 func (r *UserRepository) UpdateUser(ctx context.Context, dto UpdateUserDTO) (dbgen.User, error) {
@@ -119,7 +109,7 @@ func (r *UserRepository) UpdateUser(ctx context.Context, dto UpdateUserDTO) (dbg
 		LastName:  dto.LastName,
 		Email:     "", // we can pass empty string or support email update if needed
 	})
-	return user, translateError(err, "user")
+	return user, response.TranslateDBError(err, "user")
 }
 
 func (r *UserRepository) DeleteUser(ctx context.Context, dto DeleteUserDTO) error {
@@ -143,11 +133,11 @@ func (r *UserRepository) CountUsers(ctx context.Context, dto struct{ Tx pgx.Tx }
 func (r *UserRepository) GetRoleByName(ctx context.Context, name string) (dbgen.Role, error) {
 	querier := r.getQuerier(nil)
 	role, err := querier.GetRoleByName(ctx, name)
-	return role, translateError(err, "role")
+	return role, response.TranslateDBError(err, "role")
 }
 
 func (r *UserRepository) GetRoleNameByID(ctx context.Context, id uuid.UUID) (string, error) {
 	querier := r.getQuerier(nil)
 	name, err := querier.GetRoleNameByID(ctx, id)
-	return name, translateError(err, "role")
+	return name, response.TranslateDBError(err, "role")
 }

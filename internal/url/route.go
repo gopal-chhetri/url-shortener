@@ -48,17 +48,17 @@ func SetupUrlRoute(app *bootstrap.Application, router *gin.Engine, publicGroup *
 	// Protected routes (authentication required)
 	urlGroup := protectedGroup.Group("/urls")
 
-	// Apply Casbin authorization middleware
+	// Casbin RBAC on the urls resource
 	authMiddleware := middleware.NewAuthMiddleware(nil, enforcer)
+	read := authMiddleware.RBACMiddleware("urls", "read")
+	write := authMiddleware.RBACMiddleware("urls", "write")
+	del := authMiddleware.RBACMiddleware("urls", "delete")
 
-	urlGroup.Use(authMiddleware.CasbinMiddleware())
-	{
-		urlGroup.POST("", urlHandler.CreateURL)
-		urlGroup.GET("", urlHandler.ListURLs)
-		urlGroup.GET("/:id", urlHandler.GetURLByID)
-		urlGroup.PUT("/:id", urlHandler.UpdateURL)
-		urlGroup.PATCH("/:id/status", urlHandler.PatchURLStatus)
-		urlGroup.GET("/:id/analytics", urlHandler.GetURLAnalytics)
-		urlGroup.DELETE("/:id", urlHandler.DeleteURL)
-	}
+	urlGroup.POST("", write, urlHandler.CreateURL)
+	urlGroup.GET("", read, urlHandler.ListURLs)
+	urlGroup.GET("/:id", read, urlHandler.GetURLByID)
+	urlGroup.PUT("/:id", write, urlHandler.UpdateURL)
+	urlGroup.PATCH("/:id/status", write, urlHandler.PatchURLStatus)
+	urlGroup.GET("/:id/analytics", read, urlHandler.GetURLAnalytics)
+	urlGroup.DELETE("/:id", del, urlHandler.DeleteURL)
 }

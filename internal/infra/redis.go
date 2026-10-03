@@ -35,3 +35,19 @@ func NewRedisClient(env *Env, logger *zap.Logger) *redis.Client {
 
 	return rdb
 }
+
+// URLCacheKey is the Redis key caching the URL row for a short code.
+func URLCacheKey(code string) string {
+	return "url:code:" + code
+}
+
+// UserAuthCacheKey caches a user's current role ("" when inactive) so each
+// authenticated request needn't hit the database.
+func UserAuthCacheKey(userID string) string {
+	return "auth:user:" + userID
+}
+
+// RevokedTokenKey marks a token ID (jti) as revoked until the token expires.
+func RevokedTokenKey(jti string) string {
+	return "auth:revoked:" + jti
+}
