@@ -560,7 +560,7 @@ function chartDefaults({ legend }) {
         position: 'bottom',
         labels: {
           color: css('--muted'),
-          font: { family: 'JetBrains Mono', size: 10 },
+          font: { family: 'Atkinson Hyperlegible Mono', size: 10 },
           boxWidth: 10, padding: 12,
         },
       },
@@ -570,18 +570,18 @@ function chartDefaults({ legend }) {
         bodyColor: css('--muted'),
         borderColor: hsla('--trace', 0.3),
         borderWidth: 1, padding: 10, cornerRadius: 8,
-        titleFont: { family: 'Inter', weight: '600' },
-        bodyFont:  { family: 'Inter' },
+        titleFont: { family: 'Atkinson Hyperlegible Next', weight: '600' },
+        bodyFont:  { family: 'Atkinson Hyperlegible Next' },
       },
     },
     scales: legend ? undefined : {
       x: {
-        ticks: { color: css('--muted'), font: { family: 'JetBrains Mono', size: 10 } },
+        ticks: { color: css('--muted'), font: { family: 'Atkinson Hyperlegible Mono', size: 10 } },
         grid:  { color: hsla('--trace', 0.06) },
         border:{ color: 'transparent' },
       },
       y: {
-        ticks: { color: css('--muted'), font: { family: 'JetBrains Mono', size: 10 } },
+        ticks: { color: css('--muted'), font: { family: 'Atkinson Hyperlegible Mono', size: 10 } },
         grid:  { color: hsla('--trace', 0.06) },
         border:{ color: 'transparent' },
       },

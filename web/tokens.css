@@ -31,9 +31,11 @@
   --warning:         hsl(45, 85%, 45%);
 
   /* ── Typography ── */
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-code: 'JetBrains Mono', 'Fira Code', monospace;
+  /* Atkinson Hyperlegible: built so 0/O and l/1/I never get confused,
+     which matters when people read and retype short codes. */
+  --font-display: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+  --font-body: 'Atkinson Hyperlegible Next', system-ui, -apple-system, sans-serif;
+  --font-code: 'Atkinson Hyperlegible Mono', ui-monospace, monospace;
 
   /* ── Spacing Scale (responsive) ── */
   --space-xs:  clamp(0.375rem, 0.3rem + 0.375vw, 0.625rem);
@@ -115,20 +117,6 @@ body {
   -webkit-tap-highlight-color: transparent;
   text-wrap: pretty;
   position: relative;
-}
-
-/* ── Grain / Noise Texture (dark only) ── */
-html:not(.dark) body::after { display: none; }
-.dark body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 10000;
-  opacity: 0.025;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 256px 256px;
 }
 
 img, svg, video { display: block; max-width: 100%; height: auto; }

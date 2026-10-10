@@ -13,7 +13,7 @@
   <link rel="icon" type="image/png" href="/app/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;600;700;800&family=Atkinson+Hyperlegible+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/app/tokens.css">
   <link rel="stylesheet" href="/app/navbar.css">
   <link rel="stylesheet" href="/app/landing.css">
@@ -22,11 +22,7 @@
 
   <a href="#main-content" class="skip-link">Skip to content</a>
 
-  <div class="trace-container">
-    <div class="trace-line"></div>
-  </div>
-
-  <nav class="glass-nav" id="top-nav">
+  <nav class="top-nav" id="top-nav">
     <a href="/app/landing.html" class="nav-brand">
       <img class="logo-img" src="/app/logo.png" alt="ShortURL">
       <span>ShortURL</span>
@@ -39,27 +35,23 @@
         <i class="ph ph-sun"></i>
       </button>
       <a href="/app/index.html#login" class="nav-btn btn-ghost">Sign In</a>
-      <a href="/app/index.html#register" class="nav-btn btn-primary">Start Building</a>
+      <a href="/app/index.html#register" class="nav-btn btn-primary">Create account</a>
     </div>
   </nav>
 
   <main id="main-content">
     <section class="hero">
       <div class="hero-content">
-        <p class="hero-eyebrow">Link management platform</p>
         <h1 class="hero-title">
-          Short links you can <em>track</em>.
+          Short links you can <span class="accent">track</span>.
         </h1>
         <p class="hero-subtitle">
-          Shorten a URL, then see how many people actually click it.
+          Paste a long URL, get a short one, and see who clicks it: when, from which device, from which country.
         </p>
 
         <div class="demo-terminal card">
           <div class="terminal-header">
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="terminal-label">shorturl</span>
+            <span class="terminal-label">try it</span>
           </div>
           <div class="terminal-body">
             <div class="input-line">
@@ -84,59 +76,47 @@
     <section id="features" class="features-section">
       <div class="section-header">
         <h2>Know what happens after you share a link.</h2>
-        <p class="section-subtitle">Real-time click data, device breakdowns, geographic maps - everything you need to measure impact.</p>
+        <p class="section-subtitle">Every click is logged with its time, browser, device and rough location. The dashboard shows it per link.</p>
       </div>
 
       <div class="feature-row">
         <div class="feature-card text-card">
-          <div class="feature-icon bg-trace">
-            <i class="ph ph-chart-bar text-trace"></i>
-          </div>
           <h3>See every click</h3>
           <p>Track browser, device, and location data for every link you share. Know who opened what, when, and where.</p>
         </div>
         <div class="feature-card visual-card">
-          <div class="viz-bar-chart">
-            <div class="viz-bar h-60"></div>
-            <div class="viz-bar h-100"></div>
-            <div class="viz-bar h-40"></div>
-            <div class="viz-bar h-80"></div>
-            <div class="viz-bar h-70"></div>
-            <div class="viz-bar h-55"></div>
-            <div class="viz-bar h-90"></div>
-          </div>
+          <figure class="viz-clicks">
+            <figcaption><span class="data-font">/k3Xa9</span> clicks, last 7 days</figcaption>
+            <div class="viz-bar-chart">
+              <div class="viz-bar" style="--h: 38%"><span>46</span></div>
+              <div class="viz-bar" style="--h: 100%"><span>121</span></div>
+              <div class="viz-bar" style="--h: 61%"><span>74</span></div>
+              <div class="viz-bar" style="--h: 47%"><span>57</span></div>
+              <div class="viz-bar" style="--h: 29%"><span>35</span></div>
+              <div class="viz-bar" style="--h: 18%"><span>22</span></div>
+              <div class="viz-bar" style="--h: 23%"><span>28</span></div>
+            </div>
+            <div class="viz-days"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+          </figure>
         </div>
       </div>
 
       <div class="feature-row">
         <div class="feature-card visual-card">
-          <div class="viz-speed">
-            <div class="viz-speed-ring">
-              <span class="viz-speed-value">Fast</span>
-            </div>
-            <div class="viz-speed-text">
-              <span class="viz-speed-label">Cached redirect</span>
-              <div class="viz-speed-line"></div>
-              <span class="viz-speed-label">Redis backend</span>
-            </div>
-          </div>
+          <pre class="viz-trace data-font" aria-label="Example redirect log"><span class="muted">GET</span>  /k3Xa9
+<span class="muted">redis</span> hit
+<span class="accent">302</span>  → example.com/a/very/long/path?utm_source=newsletter</pre>
         </div>
         <div class="feature-card text-card">
-          <div class="feature-icon bg-trace">
-            <i class="ph ph-lightning text-trace"></i>
-          </div>
-          <h3>Fast by default</h3>
-          <p>Popular links resolve from a Redis cache in one step, so most redirects are quick.</p>
+          <h3>Popular links skip the database</h3>
+          <p>Recently used links are cached in Redis, so the redirect is answered without a database query.</p>
         </div>
       </div>
 
       <div class="feature-row">
         <div class="feature-card text-card">
-          <div class="feature-icon bg-trace">
-            <i class="ph ph-shield-check text-trace"></i>
-          </div>
-          <h3>Full control</h3>
-          <p>Toggle links on and off, manage access with role-based permissions, and keep an audit trail of every change.</p>
+          <h3>Turn a link off without deleting it</h3>
+          <p>Disable a link and it stops redirecting, but keeps its history. Roles control who can edit, and every change is logged.</p>
         </div>
         <div class="feature-card visual-card">
           <div class="viz-toggle">
@@ -147,7 +127,7 @@
             </div>
             <div class="viz-toggle-group">
               <span class="viz-badge-offline">Off</span>
-              <div class="viz-toggle-switch" style="background: var(--danger-dim); border-color: var(--danger);"></div>
+              <div class="viz-toggle-switch is-off"></div>
               <span class="viz-toggle-label">Route disabled</span>
             </div>
           </div>
@@ -165,7 +145,7 @@
     </section>
 
     <section class="cta-section">
-      <h2>Ready to try it?</h2>
+      <h2>Shorten your first link</h2>
       <p>Shorten up to 3 links free, or create an account for the full dashboard.</p>
       <a href="/app/index.html#register" class="btn-primary btn-large">Create free account</a>
     </section>
