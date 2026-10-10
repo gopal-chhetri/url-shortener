@@ -6,6 +6,7 @@ Live hosted on [shorturl.soylab.dpdns.org](https://shorturl.soylab.dpdns.org/).
 ## System Architecture
 
 ### 1. URL Creation Flow (Long to Short)
+
 ```mermaid
 sequenceDiagram
     actor User
@@ -36,6 +37,7 @@ sequenceDiagram
 ```
 
 ### 2. URL Redirection Flow
+
 ```mermaid
 sequenceDiagram
     actor Visitor
@@ -66,6 +68,7 @@ sequenceDiagram
 ```
 
 ### 3. Deployment & CI/CD Pipeline
+
 ```mermaid
 graph TD
     Developer[Developer] -->|git push| GitHub[GitHub Repository]
@@ -105,7 +108,7 @@ graph TD
 ## Tech Stack
 
 | Component | Technology |
-|-----------|------------|
+| ----------- | ------------ |
 | Backend | Go 1.26, Gin |
 | Database | PostgreSQL 15 (PostGIS) |
 | Cache | Redis 7 |
@@ -143,13 +146,12 @@ docker compose up --build
 
 The app will be available at `http://localhost:8080`.
 
-
 ## Environment Variables
 
 Copy `deployments/local-dev/.env.sample` to `deployments/local-dev/.env` and configure the following variables:
 
 | Variable | Description | Default |
-|----------|-------------|---------|
+| ---------- | ------------- | --------- |
 | `DB_NAME` | PostgreSQL Database name | `url-shortener` |
 | `DB_HOST` | PostgreSQL Hostname | `db` |
 | `DB_PORT` | PostgreSQL Port | `5432` |
@@ -168,12 +170,13 @@ Copy `deployments/local-dev/.env.sample` to `deployments/local-dev/.env` and con
 ## API Documentation
 
 Once running, visit:
+
 - **Swagger UI**: `http://localhost:8080/swagger/index.html`
 
 ### Key Endpoints
 
 | Method | Path | Description | Auth |
-|--------|------|-------------|------|
+| -------- | ------ | ------------- | ------ |
 | POST | `/api/v1/auth/register` | Register new user | No |
 | POST | `/api/v1/auth/login` | Login | No |
 | POST | `/api/v1/auth/refresh` | Swap a refresh token for a new token pair (old one is revoked) | Refresh token |
@@ -194,6 +197,7 @@ Short links must point to `http`/`https` URLs (max 500 characters). Custom slugs
 ### CI/CD Pipeline
 
 Push to `main` triggers:
+
 1. **CI**: Lint → Test → Build
 2. **CD**: Build Docker image → Push to GHCR → Ensure VPS permissions → SCP deploy files and root `migrations/` → SSH `deploy.sh` on VPS
 
@@ -209,7 +213,6 @@ Push to `main` triggers:
 - [ ] Add unit and integration test coverage for core redirection flows.
 - [ ] Migrate infrastructure from Docker Compose to **Kubernetes** to allow horizontal scaling of the Go API instances.
 - [ ] Grafana and Prometheus setup for monitoring.
-- [x] Implement geo-location tracking for click analytics.
 
 ## License
 
