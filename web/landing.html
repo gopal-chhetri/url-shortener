@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ShortURL</title>
-  <meta name="description" content="Shorten URLs and track every click from one dashboard. Real-time analytics, device tracking, and link management.">
+  <meta name="description" content="Shorten a link and see who clicks it: when, from which browser and device, from which country.">
   <meta property="og:title" content="ShortURL">
-  <meta property="og:description" content="Shorten URLs and track every click from one dashboard. Real-time analytics, device tracking, and link management.">
+  <meta property="og:description" content="Shorten a link and see who clicks it: when, from which browser and device, from which country.">
   <meta property="og:image" content="/app/logo.png">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" type="image/png" href="/app/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;600;700;800&family=Atkinson+Hyperlegible+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Atkinson+Hyperlegible+Next:wght@400;500;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/app/tokens.css">
   <link rel="stylesheet" href="/app/navbar.css">
   <link rel="stylesheet" href="/app/landing.css">
@@ -22,147 +22,115 @@
 
   <a href="#main-content" class="skip-link">Skip to content</a>
 
-  <nav class="top-nav" id="top-nav">
+  <nav class="top-nav" id="landing-nav">
     <a href="/app/landing.html" class="nav-brand">
-      <img class="logo-img" src="/app/logo.png" alt="ShortURL">
+      <img class="logo-img" src="/app/logo.png" alt="">
       <span>ShortURL</span>
     </a>
     <div class="nav-links">
-      <a href="#features">Features</a>
       <a href="https://github.com/gopal-chhetri/url-shortener" target="_blank" rel="noopener">Docs</a>
       <button class="theme-toggle" id="theme-toggle-landing" aria-label="Toggle theme">
         <i class="ph ph-moon"></i>
         <i class="ph ph-sun"></i>
       </button>
-      <a href="/app/index.html#login" class="nav-btn btn-ghost">Sign In</a>
+      <a href="/app/index.html#login" class="nav-btn btn-ghost">Sign in</a>
       <a href="/app/index.html#register" class="nav-btn btn-primary">Create account</a>
     </div>
   </nav>
 
-  <main id="main-content">
-    <section class="hero">
-      <div class="hero-content">
-        <h1 class="hero-title">
-          Short links you can <span class="accent">track</span>.
-        </h1>
-        <p class="hero-subtitle">
-          Paste a long URL, get a short one, and see who clicks it: when, from which device, from which country.
-        </p>
+  <main id="main-content" class="page">
 
-        <div class="demo-terminal card">
-          <div class="terminal-header">
-            <span class="terminal-label">try it</span>
-          </div>
-          <div class="terminal-body">
-            <div class="input-line">
-              <span class="prompt">&gt;</span>
-              <input type="text" id="demo-input" placeholder="Paste a long URL to shorten it..." autocomplete="off">
-              <button id="demo-btn" class="btn-terminal">Shorten</button>
-            </div>
-            <div id="demo-hint" class="demo-hint">Free demo: shorten up to 3 links without an account.</div>
-            <div id="demo-output" class="output-line hidden">
-              <div class="processing"><span class="trace-dot"></span> Tracing route...</div>
-              <div class="result-block">
-                <span class="result-label">Short link</span>
-                <a href="#" id="result-link" class="result-link"></a>
-                <button id="copy-btn" class="btn-copy">Copy</button>
-              </div>
-            </div>
-          </div>
+    <section class="tool" aria-labelledby="tool-title">
+      <h1 id="tool-title">Shorten a link.<br>See who clicks it.</h1>
+
+      <form class="shorten-form" id="shorten-form" novalidate>
+        <label for="demo-input" class="visually-hidden">Long URL</label>
+        <div class="shorten-group" id="shorten-group">
+          <input type="url" id="demo-input" placeholder="https://example.com/a/very/long/link" autocomplete="off" spellcheck="false">
+          <button type="submit" id="demo-btn" class="shorten-btn">Shorten</button>
         </div>
-      </div>
+        <p class="shorten-hint" id="demo-hint">3 free links without an account.</p>
+        <p class="shorten-error" id="demo-error" role="alert" hidden></p>
+      </form>
+
+      <article class="link-card" id="link-card" aria-live="polite">
+        <header class="link-head">
+          <span class="link-label" id="link-label">Example</span>
+          <div class="link-row">
+            <a class="link-short" id="link-short" href="#" tabindex="-1">shorturl.soylab.dpdns.org/k3Xa9</a>
+            <button type="button" class="copy-btn" id="copy-btn">Copy</button>
+          </div>
+          <p class="link-dest" id="link-dest">→ example.com/blog/2026/self-hosting-on-one-vps?utm_source=newsletter</p>
+        </header>
+
+        <div class="link-stats" id="link-stats">
+          <div class="clicks">
+            <p class="clicks-total"><strong>403</strong> clicks · last 7 days</p>
+            <div class="bars" aria-hidden="true">
+              <div class="bar" style="--h: 38%"></div>
+              <div class="bar" style="--h: 100%"></div>
+              <div class="bar" style="--h: 61%"></div>
+              <div class="bar" style="--h: 47%"></div>
+              <div class="bar" style="--h: 29%"></div>
+              <div class="bar" style="--h: 18%"></div>
+              <div class="bar" style="--h: 23%"></div>
+            </div>
+            <div class="days" aria-hidden="true"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+          </div>
+          <dl class="breakdown">
+            <div><dt>Browser</dt><dd>Chrome 61%</dd></div>
+            <div><dt>Device</dt><dd>Mobile 58%</dd></div>
+            <div><dt>Top countries</dt><dd>NP 44% · IN 21% · US 9%</dd></div>
+          </dl>
+        </div>
+
+        <div class="link-fresh" id="link-fresh" hidden>
+          <p>No clicks yet. Links you make with an account show every click in your dashboard.</p>
+          <a href="/app/index.html#register" class="text-link">Create an account</a>
+        </div>
+      </article>
     </section>
 
-    <section id="features" class="features-section">
-      <div class="section-header">
-        <h2>Know what happens after you share a link.</h2>
-        <p class="section-subtitle">Every click is logged with its time, browser, device and rough location. The dashboard shows it per link.</p>
-      </div>
-
-      <div class="feature-row">
-        <div class="feature-card text-card">
-          <h3>See every click</h3>
-          <p>Track browser, device, and location data for every link you share. Know who opened what, when, and where.</p>
-        </div>
-        <div class="feature-card visual-card">
-          <figure class="viz-clicks">
-            <figcaption><span class="data-font">/k3Xa9</span> clicks, last 7 days</figcaption>
-            <div class="viz-bar-chart">
-              <div class="viz-bar" style="--h: 38%"><span>46</span></div>
-              <div class="viz-bar" style="--h: 100%"><span>121</span></div>
-              <div class="viz-bar" style="--h: 61%"><span>74</span></div>
-              <div class="viz-bar" style="--h: 47%"><span>57</span></div>
-              <div class="viz-bar" style="--h: 29%"><span>35</span></div>
-              <div class="viz-bar" style="--h: 18%"><span>22</span></div>
-              <div class="viz-bar" style="--h: 23%"><span>28</span></div>
-            </div>
-            <div class="viz-days"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
-          </figure>
-        </div>
-      </div>
-
-      <div class="feature-row">
-        <div class="feature-card visual-card">
-          <pre class="viz-trace data-font" aria-label="Example redirect log"><span class="muted">GET</span>  /k3Xa9
+    <section class="more" aria-labelledby="more-title">
+      <h2 id="more-title">What else it does</h2>
+      <dl class="more-list">
+        <div class="more-row">
+          <dt>Recent links skip the database</dt>
+          <dd>
+            Recently used links are cached in Redis, so redirecting them doesn't touch Postgres.
+            <pre class="log"><span class="muted">GET</span>   /k3Xa9
 <span class="muted">redis</span> hit
-<span class="accent">302</span>  → example.com/a/very/long/path?utm_source=newsletter</pre>
+<span class="accent">302</span>   → example.com/blog/…</pre>
+          </dd>
         </div>
-        <div class="feature-card text-card">
-          <h3>Popular links skip the database</h3>
-          <p>Recently used links are cached in Redis, so the redirect is answered without a database query.</p>
+        <div class="more-row">
+          <dt>Turn a link off without deleting it</dt>
+          <dd>A disabled link stops redirecting but keeps its click history, so you can turn it back on later.</dd>
         </div>
-      </div>
-
-      <div class="feature-row">
-        <div class="feature-card text-card">
-          <h3>Turn a link off without deleting it</h3>
-          <p>Disable a link and it stops redirecting, but keeps its history. Roles control who can edit, and every change is logged.</p>
+        <div class="more-row">
+          <dt>Roles and an audit log</dt>
+          <dd>Admins manage every link and users manage their own. The audit log records each change and who made it.</dd>
         </div>
-        <div class="feature-card visual-card">
-          <div class="viz-toggle">
-            <div class="viz-toggle-group">
-              <span class="viz-badge-live">Live</span>
-              <div class="viz-toggle-switch"></div>
-              <span class="viz-toggle-label">Route active</span>
-            </div>
-            <div class="viz-toggle-group">
-              <span class="viz-badge-offline">Off</span>
-              <div class="viz-toggle-switch is-off"></div>
-              <span class="viz-toggle-label">Route disabled</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      </dl>
     </section>
 
-    <section class="privacy-section" id="privacy">
-      <div class="privacy-card">
-        <h3>Privacy</h3>
-        <p>
-          ShortURL stores only the data needed to operate links and analytics: account details, shortened URLs, and anonymous click data (device, browser, and coarse location when available). We don't sell personal data. Contact your administrator to request account deletion.
-        </p>
-      </div>
-    </section>
-
-    <section class="cta-section">
-      <h2>Shorten your first link</h2>
-      <p>Shorten up to 3 links free, or create an account for the full dashboard.</p>
-      <a href="/app/index.html#register" class="btn-primary btn-large">Create free account</a>
+    <section class="privacy" id="privacy" aria-labelledby="privacy-title">
+      <h2 id="privacy-title">Privacy</h2>
+      <p>
+        ShortURL stores what it needs to run links and analytics: your account, your links, and anonymous click data
+        (browser, device, and coarse location when available). We don't sell personal data. Ask your administrator
+        to delete your account.
+      </p>
     </section>
   </main>
 
   <footer class="footer">
-    <div class="footer-content">
-      <div class="footer-brand">
-        <img class="footer-logo" src="/app/logo.png" alt="">
-        <span>ShortURL</span>
-      </div>
-      <div class="footer-links">
-        <a href="https://github.com/gopal-chhetri/url-shortener" target="_blank" rel="noopener">Documentation</a>
-        <a href="/health" target="_blank" rel="noopener">Status</a>
-        <a href="#privacy">Privacy</a>
-      </div>
-    </div>
+    <span class="footer-brand">ShortURL</span>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="https://github.com/gopal-chhetri/url-shortener" target="_blank" rel="noopener">Documentation</a>
+      <a href="/health" target="_blank" rel="noopener">Status</a>
+      <a href="#privacy">Privacy</a>
+    </nav>
   </footer>
 
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>

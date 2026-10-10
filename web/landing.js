@@ -1,5 +1,7 @@
 /**
- * ShortURL: Landing Page Interactive Elements
+ * ShortURL: Landing Page
+ * Theme toggle and the shorten form. The link card starts with a sample
+ * link and is replaced by the real one after a successful shorten.
  */
 
 /* ── Theme ── */
@@ -22,29 +24,59 @@ document.addEventListener('DOMContentLoaded', () => {
     setTheme(isDark ? 'light' : 'dark');
   });
 
-  /* ── Interactive Terminal Demo ── */
-  const demoInput = document.getElementById('demo-input');
-  const demoBtn = document.getElementById('demo-btn');
-  const demoOutput = document.getElementById('demo-output');
-  const resultLink = document.getElementById('result-link');
-  const copyBtn = document.getElementById('copy-btn');
-  const processingText = document.querySelector('.processing');
-  const demoHint = document.getElementById('demo-hint');
+  /* ── Shorten form ── */
+  const form = document.getElementById('shorten-form');
+  const group = document.getElementById('shorten-group');
+  const input = document.getElementById('demo-input');
+  const button = document.getElementById('demo-btn');
+  const hint = document.getElementById('demo-hint');
+  const error = document.getElementById('demo-error');
 
-  demoBtn.addEventListener('click', async () => {
-    const url = demoInput.value.trim();
+  const card = document.getElementById('link-card');
+  const label = document.getElementById('link-label');
+  const shortLink = document.getElementById('link-short');
+  const dest = document.getElementById('link-dest');
+  const stats = document.getElementById('link-stats');
+  const fresh = document.getElementById('link-fresh');
+  const copyBtn = document.getElementById('copy-btn');
+
+  function showError(message) {
+    group.classList.add('is-error');
+    error.textContent = message;
+    error.hidden = false;
+    hint.hidden = true;
+  }
+
+  function clearError() {
+    group.classList.remove('is-error');
+    error.hidden = true;
+    hint.hidden = false;
+  }
+
+  function showLink(shortUrl, originalUrl) {
+    card.classList.add('is-real');
+    label.textContent = 'Your link';
+    shortLink.textContent = shortUrl.replace(/^https?:\/\//, '');
+    shortLink.href = shortUrl;
+    shortLink.removeAttribute('tabindex');
+    dest.textContent = '→ ' + originalUrl.replace(/^https?:\/\//, '');
+    stats.hidden = true;
+    fresh.hidden = false;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const url = input.value.trim();
 
     if (!url) {
-      demoInput.style.border = '1px solid #ff5f56';
-      setTimeout(() => demoInput.style.border = 'none', 1000);
+      showError('Paste a URL first.');
+      input.focus();
       return;
     }
 
-    demoBtn.disabled = true;
-    demoBtn.textContent = '...';
-    demoOutput.classList.remove('hidden');
-    resultLink.parentElement.style.opacity = '0';
-    processingText.innerHTML = '<span class="trace-dot"></span> Shortening...';
+    clearError();
+    button.disabled = true;
+    button.textContent = 'Shortening…';
 
     try {
       const res = await fetch('/api/v1/shorten', {
@@ -55,74 +87,37 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       if (res.status === 429) {
-        setError('You\u2019ve used your free links. Create an account to keep shortening.');
-        demoBtn.disabled = false;
-        demoBtn.textContent = 'Shorten';
-        return;
-      }
-
-      if (!res.ok) {
+        showError('You’ve used your 3 free links. Create an account to keep shortening.');
+      } else if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.message || 'Couldn\u2019t shorten that link. Please try again.');
-        demoBtn.disabled = false;
-        demoBtn.textContent = 'Shorten';
-        return;
+        showError(data.message || 'Couldn’t shorten that link. Check the URL and try again.');
+      } else {
+        const data = await res.json();
+        const shortUrl = data.data && data.data.short_url;
+        if (shortUrl) showLink(shortUrl, url);
+        else showError('Something went wrong. Please try again.');
       }
-
-      const data = await res.json();
-      const shortUrl = data.data && data.data.short_url;
-      if (!shortUrl) {
-        setError('Something went wrong. Please try again.');
-        demoBtn.disabled = false;
-        demoBtn.textContent = 'Shorten';
-        return;
-      }
-
-      processingText.innerHTML = '<span class="trace-dot"></span> Link ready.';
-      resultLink.textContent = shortUrl;
-      resultLink.href = shortUrl;
-      resultLink.parentElement.style.transition = 'opacity 0.3s ease';
-      resultLink.parentElement.style.opacity = '1';
-
-      if (demoHint) demoHint.textContent = '';
     } catch (err) {
-      setError('Network error. Please try again.');
+      showError('Network error. Check your connection and try again.');
     }
 
-    demoBtn.disabled = false;
-    demoBtn.textContent = 'Shorten';
+    button.disabled = false;
+    button.textContent = 'Shorten';
   });
 
-  demoInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') demoBtn.click();
-  });
-
-  demoInput.addEventListener('input', () => {
-    if (demoHint) demoHint.textContent = 'Free demo: shorten up to 3 links without an account.';
+  input.addEventListener('input', () => {
+    if (!error.hidden) clearError();
   });
 
   copyBtn.addEventListener('click', () => {
-    const text = resultLink.textContent;
-    if (!text) return;
-
+    const text = shortLink.href && card.classList.contains('is-real') ? shortLink.href : 'https://' + shortLink.textContent;
     navigator.clipboard.writeText(text).then(() => {
-      const originalText = copyBtn.textContent;
-      copyBtn.textContent = 'Copied!';
-      copyBtn.style.color = '#27c93f';
-      copyBtn.style.borderColor = '#27c93f';
-
+      copyBtn.textContent = 'Copied';
+      copyBtn.classList.add('is-copied');
       setTimeout(() => {
-        copyBtn.textContent = originalText;
-        copyBtn.style.color = '';
-        copyBtn.style.borderColor = '';
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('is-copied');
       }, 2000);
     });
   });
-
-  function setError(message) {
-    demoOutput.classList.remove('hidden');
-    resultLink.parentElement.style.opacity = '0';
-    processingText.innerHTML = `<span class="trace-dot"></span> ${message}`;
-    if (demoHint) demoHint.textContent = '';
-  }
 });

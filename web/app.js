@@ -153,9 +153,9 @@ function updateNavbar() {
       }
     };
   } else {
-    // Logged out: show Sign In, change CTA to Start Building
+    // Logged out: show Sign In, change CTA to Create account
     signIn.classList.remove('hidden');
-    cta.textContent = 'Start Building';
+    cta.textContent = 'Create account';
     cta.href = '/app/index.html';
     cta.onclick = null;
   }
