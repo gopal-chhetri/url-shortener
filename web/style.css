@@ -152,7 +152,7 @@ select:focus {
 
 .btn-primary {
   background: var(--trace);
-  color: #fff;
+  color: var(--on-trace);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -324,7 +324,7 @@ select:focus {
   justify-content: center;
   font-weight: 700;
   font-size: 0.8rem;
-  color: #fff;
+  color: var(--on-trace);
   flex-shrink: 0;
 }
 
@@ -851,7 +851,6 @@ select:focus {
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 49;
-  backdrop-filter: blur(2px);
 }
 
 /* ── Responsive Columns ── */

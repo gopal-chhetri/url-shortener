@@ -7,10 +7,11 @@
 :root {
   /* ── Color Palette (Light) ── */
   --ink:             hsl(42, 20%, 97%);
-  --trace:           hsl(168, 60%, 35%);
+  --trace:           hsl(168, 65%, 28%);
+  --on-trace:        #ffffff;
   --trace-dim:       hsla(168, 60%, 35%, 0.08);
   --trace-hover:     hsla(168, 60%, 35%, 0.15);
-  --trace-deep:      hsl(168, 60%, 28%);
+  --trace-deep:      hsl(168, 65%, 22%);
   --trace-glow:      hsla(168, 60%, 35%, 0.2);
   --mark:            hsl(38, 92%, 45%);
   --mark-dim:        hsla(38, 92%, 45%, 0.08);
@@ -71,9 +72,10 @@
 .dark {
   --ink:             hsl(220, 15%, 12%);
   --trace:           hsl(168, 73%, 42%);
+  --on-trace:        hsl(220, 15%, 10%);
   --trace-dim:       hsla(168, 73%, 42%, 0.12);
   --trace-hover:     hsla(168, 73%, 42%, 0.2);
-  --trace-deep:      hsl(168, 73%, 36%);
+  --trace-deep:      hsl(168, 73%, 50%);
   --trace-glow:      hsla(168, 73%, 42%, 0.35);
   --mark:            hsl(38, 92%, 50%);
   --mark-dim:        hsla(38, 92%, 50%, 0.12);
@@ -83,7 +85,7 @@
   --surface-active:  hsl(220, 12%, 22%);
   --border:          hsla(220, 10%, 90%, 0.08);
   --border-strong:   hsla(220, 10%, 90%, 0.15);
-  --muted:           hsl(215, 10%, 55%);
+  --muted:           hsl(215, 12%, 63%);
   --text:            hsl(220, 10%, 96%);
   --data:            hsl(210, 90%, 60%);
   --data-dim:        hsla(210, 90%, 60%, 0.1);
@@ -198,7 +200,7 @@ h1, h2, h3 {
   top: -100%;
   left: 1rem;
   background: var(--trace);
-  color: #fff;
+  color: var(--on-trace);
   padding: 0.5rem 1rem;
   border-radius: var(--radius-sm);
   z-index: 9999;

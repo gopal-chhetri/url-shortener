@@ -110,7 +110,7 @@ html:not(.dark) .theme-toggle .ph-sun { display: inline; }
 
 .nav-btn.btn-primary {
   background: var(--trace);
-  color: #fff;
+  color: var(--on-trace);
 }
 
 .nav-btn.btn-primary:hover {
