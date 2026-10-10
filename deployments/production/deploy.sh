@@ -38,7 +38,10 @@ fi
 
 echo "Deploying: ghcr.io/gopal-chhetri/url-shortener:${IMAGE_TAG}"
 
-# GHCR login happens in the CI deploy step (job-scoped GITHUB_TOKEN) before this script runs.
+# ── Log in to GHCR ──
+echo ""
+echo ">>> Authenticating Docker with GitHub Container Registry..."
+echo "$REGISTRY_PASSWORD" | docker login ghcr.io -u "$REGISTRY_USERNAME" --password-stdin
 
 # ── Pull new image ──
 echo ""

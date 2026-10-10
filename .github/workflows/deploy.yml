@@ -107,20 +107,17 @@ jobs:
           INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
           INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_PROJECT_ID }}
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
-          GHCR_USER: ${{ github.actor }}
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           host: ${{ env.VPS_HOST }}
           username: ${{ env.VPS_SSH_USER }}
           key: ${{ env.VPS_SSH_KEY }}
-          envs: GHCR_USER,GHCR_TOKEN,INFISICAL_CLIENT_ID,INFISICAL_CLIENT_SECRET,INFISICAL_PROJECT_ID,IMAGE_TAG
+          envs: REGISTRY_USERNAME,REGISTRY_PASSWORD,INFISICAL_CLIENT_ID,INFISICAL_CLIENT_SECRET,INFISICAL_PROJECT_ID,IMAGE_TAG
           script: |
             APP_DIR="/opt/app/url-shortener"
             sudo mkdir -p "$APP_DIR/deployments/production"
             sudo chown -R "$(whoami):$(whoami)" "$APP_DIR"
             cd "$APP_DIR/deployments/production"
-            # Job-scoped GITHUB_TOKEN (packages: write covers pulls); no long-lived PAT to expire
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin || exit 1
+            echo "$REGISTRY_PASSWORD" | docker login ghcr.io -u "$REGISTRY_USERNAME" --password-stdin
             chmod +x deploy.sh
             export INFISICAL_TOKEN=$(infisical login \
               --method=universal-auth \
