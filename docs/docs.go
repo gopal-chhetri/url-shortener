@@ -573,7 +573,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Logout user",
+                "description": "Revoke the current access token and, if given, the refresh token",
                 "consumes": [
                     "application/json"
                 ],
@@ -584,6 +584,16 @@ const docTemplate = `{
                     "auth"
                 ],
                 "summary": "Logout user",
+                "parameters": [
+                    {
+                        "description": "Refresh token to revoke",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_auth.LogoutRequest"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -602,12 +612,7 @@ const docTemplate = `{
         },
         "/auth/refresh": {
             "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Refresh JWT token for authenticated user",
+                "description": "Exchange a refresh token for a new access/refresh token pair. The presented refresh token is revoked.",
                 "consumes": [
                     "application/json"
                 ],
@@ -617,7 +622,18 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "Refresh JWT token",
+                "summary": "Refresh JWT tokens",
+                "parameters": [
+                    {
+                        "description": "Refresh request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_auth.RefreshRequest"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1415,6 +1431,9 @@ const docTemplate = `{
         "internal_auth.AuthResponse": {
             "type": "object",
             "properties": {
+                "refresh_token": {
+                    "type": "string"
+                },
                 "token": {
                     "type": "string"
                 },
@@ -1437,6 +1456,25 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "example": "password123"
+                }
+            }
+        },
+        "internal_auth.LogoutRequest": {
+            "type": "object",
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_auth.RefreshRequest": {
+            "type": "object",
+            "required": [
+                "refresh_token"
+            ],
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
                 }
             }
         },
@@ -1471,6 +1509,10 @@ const docTemplate = `{
         "internal_auth.TokenResponse": {
             "type": "object",
             "properties": {
+                "refresh_token": {
+                    "type": "string",
+                    "example": "refresh_token_string"
+                },
                 "token": {
                     "type": "string",
                     "example": "jwt_token_string"
@@ -1509,6 +1551,7 @@ const docTemplate = `{
                 },
                 "original_url": {
                     "type": "string",
+                    "maxLength": 500,
                     "example": "https://example.com/very-long-url"
                 }
             }
@@ -1550,6 +1593,7 @@ const docTemplate = `{
             "properties": {
                 "original_url": {
                     "type": "string",
+                    "maxLength": 500,
                     "example": "https://example.com/new-url"
                 }
             }

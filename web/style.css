@@ -85,7 +85,6 @@ input:focus {
 
 input::placeholder {
   color: var(--muted);
-  opacity: 0.4;
 }
 
 input:user-invalid {

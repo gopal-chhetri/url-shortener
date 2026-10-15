@@ -109,6 +109,8 @@ definitions:
     type: object
   internal_auth.AuthResponse:
     properties:
+      refresh_token:
+        type: string
       token:
         type: string
       user:
@@ -125,6 +127,18 @@ definitions:
     required:
     - email
     - password
+    type: object
+  internal_auth.LogoutRequest:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  internal_auth.RefreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
     type: object
   internal_auth.RegisterRequest:
     properties:
@@ -149,6 +163,9 @@ definitions:
     type: object
   internal_auth.TokenResponse:
     properties:
+      refresh_token:
+        example: refresh_token_string
+        type: string
       token:
         example: jwt_token_string
         type: string
@@ -173,6 +190,7 @@ definitions:
         type: string
       original_url:
         example: https://example.com/very-long-url
+        maxLength: 500
         type: string
     required:
     - original_url
@@ -200,6 +218,7 @@ definitions:
     properties:
       original_url:
         example: https://example.com/new-url
+        maxLength: 500
         type: string
     required:
     - original_url
@@ -572,7 +591,13 @@ paths:
     post:
       consumes:
       - application/json
-      description: Logout user
+      description: Revoke the current access token and, if given, the refresh token
+      parameters:
+      - description: Refresh token to revoke
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/internal_auth.LogoutRequest'
       produces:
       - application/json
       responses:
@@ -593,7 +618,15 @@ paths:
     post:
       consumes:
       - application/json
-      description: Refresh JWT token for authenticated user
+      description: Exchange a refresh token for a new access/refresh token pair. The
+        presented refresh token is revoked.
+      parameters:
+      - description: Refresh request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_auth.RefreshRequest'
       produces:
       - application/json
       responses:
@@ -610,9 +643,7 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/github_com_gopal-chhetri_url-shortener_internal_response.Response'
-      security:
-      - BearerAuth: []
-      summary: Refresh JWT token
+      summary: Refresh JWT tokens
       tags:
       - auth
   /auth/register:
